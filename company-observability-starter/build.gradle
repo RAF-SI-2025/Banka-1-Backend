@@ -1,0 +1,55 @@
+plugins {
+	id 'java-library'
+	id 'org.springframework.boot' version '4.0.3'
+	id 'io.spring.dependency-management' version '1.1.7'
+	id 'maven-publish'
+}
+
+group = 'com.library'
+version = '0.0.1-SNAPSHOT'
+description = 'Logging library for Spring Boot services'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+	testImplementation 'org.springframework.boot:spring-boot-starter-actuator-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	implementation 'io.micrometer:micrometer-tracing-bridge-otel'
+	implementation 'net.logstash.logback:logstash-logback-encoder:9.0'
+	implementation 'org.springframework.boot:spring-boot-starter-opentelemetry'
+	compileOnly 'org.springframework.security:spring-security-core'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
+
+bootJar {
+	enabled = false
+}
+
+jar {
+	enabled = true
+}
+
+publishing {
+	publications {
+		mavenJava(MavenPublication) {
+			from components.java
+			groupId = project.group
+			artifactId = 'company-observability-starter'
+			version = project.version
+		}
+	}
+}

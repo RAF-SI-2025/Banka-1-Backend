@@ -1,8 +1,5 @@
 name: CI - Java Services
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 on:
   workflow_dispatch:
   push:
@@ -27,10 +24,10 @@ jobs:
     outputs:
       services: ${{ steps.filter.outputs.changes }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.2
 
       - name: Filter changed paths
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v3.0.2
         id: filter
         with:
           filters: |
@@ -53,16 +50,16 @@ jobs:
         service: ${{ fromJson(needs.detect-changes.outputs.services) }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.2
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v4.7.0
         with:
           java-version: '21'
           distribution: 'temurin'
 
       - name: Cache Gradle packages
-        uses: actions/cache@v4
+        uses: actions/cache@v4.2.3
         with:
           path: |
             ~/.gradle/caches
@@ -79,14 +76,14 @@ jobs:
         run: ./gradlew :${{ matrix.service }}:test --no-daemon --warning-mode none --console plain
 
       - name: Publish test report
-        uses: mikepenz/action-junit-report@v4
+        uses: mikepenz/action-junit-report@v5
         if: always()
         with:
           report_paths: '${{ matrix.service }}/build/test-results/test/TEST-*.xml'
           check_name: 'Test Report - ${{ matrix.service }}'
 
       - name: Upload test artifacts on failure
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         if: failure()
         with:
           name: test-results-${{ matrix.service }}-${{ github.run_id }}
@@ -105,7 +102,7 @@ jobs:
         service: ${{ fromJson(needs.detect-changes.outputs.services) }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.2
 
       - name: Check for .skip-docs
         id: skip-docs
@@ -153,9 +150,9 @@ jobs:
 
       - name: Set up Node.js for redocly
         if: steps.skip-docs.outputs.skip != 'true'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v4.3.0
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Install redocly
         if: steps.skip-docs.outputs.skip != 'true'
@@ -213,7 +210,7 @@ jobs:
         service: ${{ fromJson(needs.detect-changes.outputs.services) }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.2
 
       - name: Check for Dockerfile
         id: check

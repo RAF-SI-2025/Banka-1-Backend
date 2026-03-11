@@ -1,0 +1,24 @@
+# IntelliJ
+.idea/
+*.iml
+out/
+
+# Gradle
+.gradle/
+build/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Env / secrets
+.env
+.env.*
+!/.env.example
+
+# Java
+hs_err_pid*
+replay_pid*

@@ -1,0 +1,17 @@
+employees:
+  permissions:
+    BASIC:
+      - BANKING_BASIC                    # osnovno poslovanje banke
+      - CLIENT_MANAGE                    # upravljanje klijentima
+
+    AGENT:
+      - SECURITIES_TRADE_LIMITED         # trgovina hartijama sa berze uz limite
+
+    SUPERVISOR:
+      - SECURITIES_TRADE_UNLIMITED       # trgovina hartijama sa berze bez limita
+      - TRADE_UNLIMITED                  # trgovina bez limita
+      - OTC_TRADE                        # OTC (over-the-counter) - trgovina za direktnu trgovinu akcijama i futures-ima
+      - FUND_AGENT_MANAGE                # upravljanje fondovima i agentima
+
+    ADMIN:
+      - EMPLOYEE_MANAGE_ALL              # upravlja svim zaposlenima

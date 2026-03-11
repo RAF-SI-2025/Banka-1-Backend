@@ -1,0 +1,48 @@
+version: '3.8'
+
+# Popis svih containera koji se dizu ovom skriptom.
+services:
+  postgres: # Instanca containera koja se vrti
+    image: postgres:15
+    container_name: banka_postgres_db
+    ports:
+      # Cita DB_PORT iz .env fajla. Ako ne postoji, koristi 5432 kao default
+      - "${DB_PORT:-5432}:5432"
+    env_file:
+      - .env
+    environment:
+      # Postavi sifru na onu iz env fajla, istu koju app.properties iz springa koristi da se poveze sa ovom instancom postgrea
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # direktorijum za cuvanje stanja i podataka šeme
+    restart: unless-stopped
+
+#  rabbitmq:
+#    image: rabbitmq:3-management
+#    container_name: banka_rabbitmq
+#    ports:
+#      - "${RABBITMQ_PORT:-5672}:5672"
+#      - "15672:15672"
+#    environment:
+#      RABBITMQ_DEFAULT_USER: rabbit
+#      RABBITMQ_DEFAULT_PASS: rabbit
+#    restart: unless-stopped
+  user-service:
+    build: . # Govori Dockeru: "Nađi Dockerfile u istom folderu i napravi image"
+    container_name: banka_user_service
+    ports:
+      - "${DOCKER_PORT:-8081}:${DOCKER_PORT:-8081}"
+    env_file:
+      - .env
+    environment:
+      DB_HOST: postgres
+      RABBIT_HOST: rabbitmq
+    depends_on:
+      - postgres # Osigurava da se prvo upali baza, pa tek onda Spring Boot
+      - rabbitmq
+    restart: on-failure
+
+volumes:
+  postgres_data:

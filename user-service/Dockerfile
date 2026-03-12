@@ -8,7 +8,7 @@ COPY company-observability-starter ./company-observability-starter
 
 WORKDIR /app/user-service
 
-RUN gradle build --no-daemon
+RUN gradle build -x test --no-daemon
 
 FROM eclipse-temurin:21-jre-alpine
 

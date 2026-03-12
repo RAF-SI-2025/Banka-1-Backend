@@ -218,9 +218,13 @@ public class CrudServiceImplementation implements CrudService {
      * @throws BusinessException ako zaposleni nije nadjen
      */
     @Override
-    public void deleteEmployee(Long id) {
+    public void deleteEmployee(Long id, Jwt jwt) {
         Zaposlen zaposlen = zaposlenRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND, "ID: " + id));
+
+        Role role1 = Role.valueOf((String) jwt.getClaims().get(role));
+        if (role1.getPower() <= zaposlen.getRole().getPower())
+            throw new BusinessException(ErrorCode.NOT_STRONG_ROLE, "Slab si");
 
         zaposlenRepository.delete(zaposlen);
 

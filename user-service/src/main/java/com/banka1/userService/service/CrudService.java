@@ -78,5 +78,5 @@ public interface CrudService {
      *
      * @param id identifikator zaposlenog koji se brise
      */
-    void deleteEmployee(Long id);
+    void deleteEmployee(Long id, Jwt jwt);
 }

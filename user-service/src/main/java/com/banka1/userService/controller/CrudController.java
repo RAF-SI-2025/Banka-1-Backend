@@ -146,7 +146,7 @@ public class CrudController {
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteEmployee(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id) {
-        crudService.deleteEmployee(id);
+        crudService.deleteEmployee(id, jwt);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 }

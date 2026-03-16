@@ -2,6 +2,7 @@ plugins {
 	id("java-library")
 	id("maven-publish")
 	id("io.spring.dependency-management") version "1.1.7"
+	checkstyle
 }
 
 group = "com.banka1"
@@ -50,6 +51,14 @@ dependencies {
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
 
+}
+
+checkstyle {
+	configFile = rootProject.file("checkstyle.xml")
+}
+
+tasks.withType<org.gradle.api.plugins.quality.Checkstyle>().configureEach {
+	ignoreFailures = true
 }
 
 tasks.withType<Test> {

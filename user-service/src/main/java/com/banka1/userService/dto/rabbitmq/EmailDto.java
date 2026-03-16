@@ -35,7 +35,7 @@ public class EmailDto {
     /**
      * Opcioni objekat sa linkom za reset lozinke ili aktivaciju naloga.
      */
-    private ResetLinkDto resetLinkDto;
+    private ResetLinkDto templateVariables;
 
     /**
      * Kreira payload za mejl koji sadrzi i link za aktivaciju ili reset lozinke.
@@ -49,7 +49,7 @@ public class EmailDto {
         this.userEmail = userEmail;
         this.username = username;
         this.emailType = emailType;
-        resetLinkDto = new ResetLinkDto(link, emailType);
+        templateVariables = new ResetLinkDto(link, emailType);
     }
 
     /**

@@ -8,7 +8,7 @@ COPY company-observability-starter ./company-observability-starter
 
 WORKDIR /app/user-service
 
-RUN gradle build -x test --no-daemon -x checkstyleMain -x checkstyleTest
+RUN gradle build --no-daemon -x test -x checkstyleMain -x checkstyleTest
 
 FROM eclipse-temurin:21-jre-alpine
 

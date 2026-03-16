@@ -29,8 +29,8 @@ repositories {
 }
 
 dependencies {
-    implementation("com.banka1:security-lib:0.0.1-SNAPSHOT")
-    implementation("com.library:company-observability-starter:0.0.1-SNAPSHOT")
+    implementation(project(":security-lib"))
+    implementation(project(":company-observability-starter"))
 //	implementation("tools.jackson.core:jackson-core:2.21.1")
 //	implementation("tools.jackson.core:jackson-databind:2.21.1")
 //	implementation("tools.jackson.core:jackson-annotations:2.21.1")

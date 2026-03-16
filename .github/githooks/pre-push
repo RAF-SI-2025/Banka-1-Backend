@@ -133,36 +133,37 @@ validate_openapi_for_service() {
 
     SPEC_FOUND=1
     echo "  -> Validating OpenAPI: $SPEC"
+
     grep -qi "^openapi:" "$SPEC" || {
-          echo "  [FAIL] OpenAPI spec missing 'openapi:' field: $SPEC"
-          return 1
-        }
+      echo "  [FAIL] OpenAPI spec missing 'openapi:' field: $SPEC"
+      return 1
+    }
 
-        grep -qi "^info:" "$SPEC" || {
-          echo "  [FAIL] OpenAPI spec missing 'info:' section: $SPEC"
-          return 1
-        }
+    grep -qi "^info:" "$SPEC" || {
+      echo "  [FAIL] OpenAPI spec missing 'info:' section: $SPEC"
+      return 1
+    }
 
-        grep -qi "^[[:space:]]*title:" "$SPEC" || {
-          echo "  [FAIL] OpenAPI spec missing 'title:' field: $SPEC"
-          return 1
-        }
+    grep -qi "^[[:space:]]*title:" "$SPEC" || {
+      echo "  [FAIL] OpenAPI spec missing 'title:' field: $SPEC"
+      return 1
+    }
 
-        grep -qi "^[[:space:]]*version:" "$SPEC" || {
-          echo "  [FAIL] OpenAPI spec missing 'version:' field: $SPEC"
-          return 1
-        }
+    grep -qi "^[[:space:]]*version:" "$SPEC" || {
+      echo "  [FAIL] OpenAPI spec missing 'version:' field: $SPEC"
+      return 1
+    }
 
-        grep -qi "^paths:" "$SPEC" || {
-          echo "  [FAIL] OpenAPI spec missing 'paths:' section: $SPEC"
-          return 1
-        }
+    grep -qi "^paths:" "$SPEC" || {
+      echo "  [FAIL] OpenAPI spec missing 'paths:' section: $SPEC"
+      return 1
+    }
 
-        redocly lint "$SPEC" || {
-          echo "  [FAIL] OpenAPI validation failed: $SPEC"
-          return 1
-        }
-      done
+    redocly lint "$SPEC" || {
+      echo "  [FAIL] OpenAPI validation failed: $SPEC"
+      return 1
+    }
+  done
 
   if [ "$SPEC_FOUND" -eq 0 ]; then
     echo "  [FAIL] $SERVICE_NAME: no OpenAPI spec found."

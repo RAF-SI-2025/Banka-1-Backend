@@ -69,17 +69,30 @@ jobs:
         with:
           gradle-version: '8.14'
 
-      - name: Generate Gradle wrapper
-        run: gradle wrapper --gradle-version=8.14
-
       - name: Lint
-        run: ./gradlew :${{ matrix.service }}:checkstyleMain :${{ matrix.service }}:checkstyleTest --no-daemon --warning-mode none --console plain
+        run: |
+          SERVICE="${{ matrix.service }}"
+          ./gradlew ":${SERVICE}:checkstyleMain" ":${SERVICE}:checkstyleTest" --no-daemon --warning-mode none --console plain
 
       - name: Build
-        run: ./gradlew :${{ matrix.service }}:build -x test --no-daemon --warning-mode none --console plain
+        run: |
+          SERVICE="${{ matrix.service }}"
+          ./gradlew ":${SERVICE}:build" -x test --no-daemon --warning-mode none --console plain
 
       - name: Test
-        run: ./gradlew :${{ matrix.service }}:test --no-daemon --warning-mode none --console plain
+        run: |
+          SERVICE="${{ matrix.service }}"
+          ./gradlew ":${SERVICE}:test" --no-daemon --warning-mode none --console plain
+
+      - name: Generate JaCoCo report (if available)
+        if: always()
+        run: |
+          SERVICE="${{ matrix.service }}"
+          if ./gradlew ":${SERVICE}:tasks" --all --console plain | grep -q "jacocoTestReport"; then
+            ./gradlew ":${SERVICE}:jacocoTestReport" --no-daemon --warning-mode none --console plain
+          else
+            echo "No jacocoTestReport task for ${SERVICE}; skipping coverage report generation."
+          fi
 
       - name: Publish test report
         uses: mikepenz/action-junit-report@v5
@@ -94,6 +107,15 @@ jobs:
         with:
           name: test-results-${{ matrix.service }}-${{ github.run_id }}
           path: ${{ matrix.service }}/build/reports/tests/
+          retention-days: 7
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4.6.2
+        if: always()
+        with:
+          name: coverage-${{ matrix.service }}-${{ github.run_id }}
+          path: ${{ matrix.service }}/build/reports/jacoco/test/html/
+          if-no-files-found: ignore
           retention-days: 7
 
   # ── Validate Documentation ────────────────────────────────────────────────
@@ -113,9 +135,10 @@ jobs:
       - name: Check for .skip-docs
         id: skip-docs
         run: |
-          if [ -f "${{ matrix.service }}/.skip-docs" ]; then
+          SERVICE="${{ matrix.service }}"
+          if [ -f "$SERVICE/.skip-docs" ]; then
             echo "skip=true" >> $GITHUB_OUTPUT
-            echo "⏭️  ${{ matrix.service }}: documentation validation skipped (.skip-docs)"
+            echo "⏭️  $SERVICE: documentation validation skipped (.skip-docs)"
           else
             echo "skip=false" >> $GITHUB_OUTPUT
           fi
@@ -123,8 +146,9 @@ jobs:
       - name: Check README.md exists
         if: steps.skip-docs.outputs.skip != 'true'
         run: |
-          if [ ! -f "${{ matrix.service }}/README.md" ]; then
-            echo "❌ ${{ matrix.service }}/README.md is missing."
+          SERVICE="${{ matrix.service }}"
+          if [ ! -f "$SERVICE/README.md" ]; then
+            echo "❌ $SERVICE/README.md is missing."
             echo "   Every service must have a README.md with:"
             echo "   - Docker Compose usage instructions"
             echo "   - .env / environment variable documentation"
@@ -135,31 +159,32 @@ jobs:
       - name: Check README.md required sections
         if: steps.skip-docs.outputs.skip != 'true'
         run: |
-          README="${{ matrix.service }}/README.md"
+          SERVICE="${{ matrix.service }}"
+          README="$SERVICE/README.md"
           FAILED=0
-          
+
           grep -qi "^# " "$README" || {
-            echo "❌ ${{ matrix.service }}/README.md: missing top-level title."
+            echo "❌ $SERVICE/README.md: missing top-level title."
             FAILED=1
           }
           grep -q '```' "$README" || {
-            echo "❌ ${{ matrix.service }}/README.md: missing example code block."
+            echo "❌ $SERVICE/README.md: missing example code block."
             FAILED=1
           }
           grep -qi "docker.compose\|docker compose" "$README" || {
-            echo "❌ ${{ matrix.service }}/README.md: missing Docker Compose instructions."
+            echo "❌ $SERVICE/README.md: missing Docker Compose instructions."
             FAILED=1
           }
           grep -qi "\.env\|environment variable" "$README" || {
-            echo "❌ ${{ matrix.service }}/README.md: missing .env / environment variable documentation."
+            echo "❌ $SERVICE/README.md: missing .env / environment variable documentation."
             FAILED=1
           }
           grep -qi "endpoint\|event\|api" "$README" || {
-            echo "❌ ${{ matrix.service }}/README.md: missing endpoint or event examples."
+            echo "❌ $SERVICE/README.md: missing endpoint or event examples."
             FAILED=1
           }
 
-          [ "$FAILED" -eq 0 ] && echo "✅ ${{ matrix.service }}/README.md contains all required sections."
+          [ "$FAILED" -eq 0 ] && echo "✅ $SERVICE/README.md contains all required sections."
           exit $FAILED
 
       - name: Set up Node.js for redocly
@@ -167,10 +192,11 @@ jobs:
         uses: actions/setup-node@v4.3.0
         with:
           node-version: '24'
+          cache: 'npm'
 
       - name: Install redocly
         if: steps.skip-docs.outputs.skip != 'true'
-        run: npm install -g @redocly/cli
+        run: npm ci
 
       - name: Check OpenAPI spec exists or is skipped
         if: steps.skip-docs.outputs.skip != 'true'
@@ -236,7 +262,7 @@ jobs:
             exit 1
           }
           
-          redocly lint "$SPEC"
+          npx redocly lint "$SPEC"
           echo "✅ OpenAPI spec is valid."
 
   # ── Docker Build Validation ───────────────────────────────────────────────
@@ -258,43 +284,48 @@ jobs:
       - name: Check for Dockerfile
         id: check
         run: |
-          if [ -f "${{ matrix.service }}/Dockerfile" ]; then
+          SERVICE="${{ matrix.service }}"
+          if [ -f "$SERVICE/Dockerfile" ]; then
             echo "exists=true" >> $GITHUB_OUTPUT
           else
             echo "exists=false" >> $GITHUB_OUTPUT
-            echo "No Dockerfile found in ${{ matrix.service }}, skipping Docker validation."
+            echo "No Dockerfile found in $SERVICE, skipping Docker validation."
+          fi
 
       # ── Build Docker image from repo root
       - name: Build Docker image
         if: steps.check.outputs.exists == 'true'
         run: |
-          echo "Building Docker image for ${{ matrix.service }}"
-          docker build -f ${{ matrix.service }}/Dockerfile . \
-            -t ci-test/${{ matrix.service }}:latest
+          SERVICE="${{ matrix.service }}"
+          echo "Building Docker image for $SERVICE"
+          docker build -f "$SERVICE/Dockerfile" . \
+            -t "ci-test/$SERVICE:latest"
 
       # ── Test Docker image starts successfully
       - name: Test Docker image runs
         if: steps.check.outputs.exists == 'true'
         run: |
-          echo "Starting container for ${{ matrix.service }}"
-          docker run -d --name ci-${{ matrix.service }} ci-test/${{ matrix.service }}:latest
+          SERVICE="${{ matrix.service }}"
+          echo "Starting container for $SERVICE"
+          docker run -d --name "ci-$SERVICE" "ci-test/$SERVICE:latest"
           sleep 15
 
-          STATUS=$(docker inspect -f '{{.State.Status}}' ci-${{ matrix.service }})
+          STATUS=$(docker inspect -f '{{.State.Status}}' "ci-$SERVICE")
           echo "Container status: $STATUS"
 
           if [ "$STATUS" != "running" ]; then
-           echo "❌ Container for ${{ matrix.service }} is not running."
-           docker logs ci-${{ matrix.service }} || true
+           echo "❌ Container for $SERVICE is not running."
+           docker logs "ci-$SERVICE" || true
            exit 1
           fi
 
-          echo "✅ Docker image for ${{ matrix.service }} started successfully."
+          echo "✅ Docker image for $SERVICE started successfully."
       - name: Cleanup container
         if: always() && steps.check.outputs.exists == 'true'
         run: |
-          docker rm -f ci-${{ matrix.service }} >/dev/null 2>&1 || true
-        
+          SERVICE="${{ matrix.service }}"
+          docker rm -f "ci-$SERVICE" >/dev/null 2>&1 || true
+
   # ── TODO: Docker Build & Push to Registry ────────────────────────────────
   # Configure once a container registry is available.
 

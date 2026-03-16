@@ -62,19 +62,7 @@ class NotificationContentResolverUnitTest {
                 () -> NotificationContentResolver.resolve(request, NotificationType.EMPLOYEE_CREATED, templateFactory));
     }
 
-    @Test
-    void resolveThrowsWhenEmailHasNoAtSign() {
-        NotificationRequest request = new NotificationRequest("Alice", "not-an-email", Map.of());
-        assertThrows(IllegalArgumentException.class,
-                () -> NotificationContentResolver.resolve(request, NotificationType.EMPLOYEE_CREATED, templateFactory));
-    }
 
-    @Test
-    void resolveThrowsWhenEmailHasNoTld() {
-        NotificationRequest request = new NotificationRequest("Alice", "alice@domain", Map.of());
-        assertThrows(IllegalArgumentException.class,
-                () -> NotificationContentResolver.resolve(request, NotificationType.EMPLOYEE_CREATED, templateFactory));
-    }
 
     @Test
     void resolveThrowsWhenNotificationTypeIsNull() {

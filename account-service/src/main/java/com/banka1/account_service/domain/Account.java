@@ -37,7 +37,7 @@ public abstract class Account extends BaseEntity{
     @Column(nullable = false)
     private BigDecimal raspolozivoStanje= BigDecimal.valueOf(0);
     @Column(nullable = false)
-    private Long zaposleni;
+    private Long zaposlen;
     //todo mozda LocalDateTime
     @CreationTimestamp
     @Column(nullable = false,updatable = false)

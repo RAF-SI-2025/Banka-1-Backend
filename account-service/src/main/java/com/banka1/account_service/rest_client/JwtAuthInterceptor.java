@@ -2,6 +2,7 @@ package com.banka1.account_service.rest_client;
 
 import com.banka1.account_service.security.JWTService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpRequest;
 import org.springframework.http.client.ClientHttpRequestExecution;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
@@ -11,6 +12,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.io.IOException;
 
+
+@Configuration
 @RequiredArgsConstructor
 public class JwtAuthInterceptor implements ClientHttpRequestInterceptor {
 

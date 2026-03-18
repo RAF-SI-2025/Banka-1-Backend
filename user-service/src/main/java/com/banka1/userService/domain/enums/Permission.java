@@ -37,6 +37,5 @@ public enum Permission {
     EMPLOYEE_MANAGE_ALL("upravlja svim zaposlenima");
 
     /** Citljiv opis permisije na srpskom jeziku. */
-    @Setter
-    private String description;
+    private final String description;
 }

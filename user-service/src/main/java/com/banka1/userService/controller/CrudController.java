@@ -91,8 +91,8 @@ public class CrudController {
     public ResponseEntity<Page<EmployeeResponseDto>> globalSearchEmployees(
             @AuthenticationPrincipal Jwt jwt,
             @RequestParam(required = false) String query,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(defaultValue = "0") @Min(value = 0) int page,
+            @RequestParam(defaultValue = "10") @Min(value = 1) @Max(value = 100) int size
     ) {
         Pageable pageable = PageRequest.of(page, size);
         Page<EmployeeResponseDto> response = crudService.globalSearchEmployees(query, pageable);

@@ -1,0 +1,649 @@
+openapi: 3.1.0
+info:
+  title: Account service API
+  description: API for accountst
+  version: "1.0"
+servers:
+- url: http://localhost:8081
+  description: Generated server url
+paths:
+  /employee/cards/{id}:
+    put:
+      tags:
+      - employee-controller
+      operationId: updateCard
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCardDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+  /employee/accounts/fx:
+    post:
+      tags:
+      - employee-controller
+      operationId: createFxAccount
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FxDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+  /employee/accounts/checking:
+    post:
+      tags:
+      - employee-controller
+      operationId: createCheckingAccount
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckingDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+  /client/transactions/{id}/approve:
+    post:
+      tags:
+      - client-controller
+      operationId: approveTransaction
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApproveDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+  /client/payments:
+    post:
+      tags:
+      - client-controller
+      operationId: newPayment
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewPaymentDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+  /client/accounts/{id}/name:
+    patch:
+      tags:
+      - client-controller
+      operationId: editAccountName
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EditAccountNameDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+  /client/accounts/{id}/limit:
+    patch:
+      tags:
+      - client-controller
+      operationId: editAccountLimit
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EditAccountLimitDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+  /employee/accounts:
+    get:
+      tags:
+      - employee-controller
+      operationId: searchAllAccounts
+      parameters:
+      - name: imeVlasnikaRacuna
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: prezimeVlasnikaRacuna
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: accountNumber
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+          minimum: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+          maximum: 100
+          minimum: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PageAccountSearchResponseDto"
+  /client/accounts:
+    get:
+      tags:
+      - client-controller
+      operationId: findMyAccounts
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+          minimum: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+          maximum: 100
+          minimum: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PageAccountResponseDto"
+  /client/accounts/{id}:
+    get:
+      tags:
+      - client-controller
+      operationId: getDetails
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AccountDetailsResponseDto"
+  /client/accounts/{id}/transactions:
+    get:
+      tags:
+      - client-controller
+      operationId: findAllTransactions
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+          minimum: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+          maximum: 100
+          minimum: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PageTransactionResponseDto"
+  /client/accounts/{id}/cards:
+    get:
+      tags:
+      - client-controller
+      operationId: findAllCards
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+          minimum: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+          maximum: 100
+          minimum: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PageCardResponseDto"
+components:
+  schemas:
+    UpdateCardDto:
+      type: object
+      properties:
+        cardStatus:
+          type: string
+          enum:
+          - ACTIVATED
+          - DEACTIVATED
+          - BLOCKED
+      required:
+      - cardStatus
+    FirmaDto:
+      type: object
+      properties:
+        naziv:
+          type: string
+          minLength: 1
+        maticniBroj:
+          type: string
+          minLength: 1
+        poreskiBroj:
+          type: string
+          minLength: 1
+        sifraDelatnosti:
+          type: string
+          minLength: 1
+        adresa:
+          type: string
+        vlasnik:
+          type: integer
+          format: int64
+      required:
+      - maticniBroj
+      - naziv
+      - poreskiBroj
+      - sifraDelatnosti
+      - vlasnik
+    FxDto:
+      type: object
+      properties:
+        nazivRacuna:
+          type: string
+          minLength: 1
+        idVlasnika:
+          type: integer
+          format: int64
+        jmbg:
+          type: string
+        currency:
+          type: string
+          enum:
+          - RSD
+          - EUR
+          - CHF
+          - USD
+          - GBP
+          - JPY
+          - CAD
+          - AUD
+        tipRacuna:
+          type: string
+          enum:
+          - PERSONAL
+          - BUSINESS
+        firma:
+          $ref: "#/components/schemas/FirmaDto"
+      required:
+      - currency
+      - nazivRacuna
+      - tipRacuna
+    CheckingDto:
+      type: object
+      properties:
+        nazivRacuna:
+          type: string
+          minLength: 1
+        idVlasnika:
+          type: integer
+          format: int64
+        jmbg:
+          type: string
+        vrstaRacuna:
+          type: string
+          enum:
+          - STANDARDNI
+          - STEDNI
+          - PENZIONERSKI
+          - ZA_MLADE
+          - ZA_STUDENTE
+          - ZA_NEZAPOSLENE
+          - DOO
+          - AD
+          - FONDACIJA
+        firma:
+          $ref: "#/components/schemas/FirmaDto"
+      required:
+      - nazivRacuna
+      - vrstaRacuna
+    ApproveDto:
+      type: object
+      properties:
+        key:
+          type: string
+          minLength: 1
+      required:
+      - key
+    NewPaymentDto:
+      type: object
+      properties:
+        nazivPrimaoca:
+          type: string
+          minLength: 1
+        racunPrimaoca:
+          type: string
+          minLength: 1
+          pattern: "\\d{18}"
+        iznos:
+          type: number
+        pozivNaBroj:
+          type: string
+        sifraPlacanja:
+          type: string
+          pattern: "\\d{3}"
+        svrhaPlacanja:
+          type: string
+          minLength: 1
+        racunPratioca:
+          type: string
+          minLength: 1
+          pattern: "\\d{18}"
+      required:
+      - iznos
+      - nazivPrimaoca
+      - racunPratioca
+      - racunPrimaoca
+      - sifraPlacanja
+      - svrhaPlacanja
+    EditAccountNameDto:
+      type: object
+      properties:
+        accountName:
+          type: string
+          minLength: 1
+      required:
+      - accountName
+    EditAccountLimitDto:
+      type: object
+      properties:
+        accountLimit:
+          type: number
+          minimum: 0.0
+      required:
+      - accountLimit
+    AccountSearchResponseDto: {}
+    PageAccountSearchResponseDto:
+      type: object
+      properties:
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+        first:
+          type: boolean
+        last:
+          type: boolean
+        size:
+          type: integer
+          format: int32
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccountSearchResponseDto"
+        number:
+          type: integer
+          format: int32
+        sort:
+          $ref: "#/components/schemas/SortObject"
+        numberOfElements:
+          type: integer
+          format: int32
+        pageable:
+          $ref: "#/components/schemas/PageableObject"
+        empty:
+          type: boolean
+    PageableObject:
+      type: object
+      properties:
+        offset:
+          type: integer
+          format: int64
+        sort:
+          $ref: "#/components/schemas/SortObject"
+        unpaged:
+          type: boolean
+        paged:
+          type: boolean
+        pageNumber:
+          type: integer
+          format: int32
+        pageSize:
+          type: integer
+          format: int32
+    SortObject:
+      type: object
+      properties:
+        unsorted:
+          type: boolean
+        empty:
+          type: boolean
+        sorted:
+          type: boolean
+    AccountResponseDto: {}
+    PageAccountResponseDto:
+      type: object
+      properties:
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+        first:
+          type: boolean
+        last:
+          type: boolean
+        size:
+          type: integer
+          format: int32
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccountResponseDto"
+        number:
+          type: integer
+          format: int32
+        sort:
+          $ref: "#/components/schemas/SortObject"
+        numberOfElements:
+          type: integer
+          format: int32
+        pageable:
+          $ref: "#/components/schemas/PageableObject"
+        empty:
+          type: boolean
+    AccountDetailsResponseDto: {}
+    PageTransactionResponseDto:
+      type: object
+      properties:
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+        first:
+          type: boolean
+        last:
+          type: boolean
+        size:
+          type: integer
+          format: int32
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/TransactionResponseDto"
+        number:
+          type: integer
+          format: int32
+        sort:
+          $ref: "#/components/schemas/SortObject"
+        numberOfElements:
+          type: integer
+          format: int32
+        pageable:
+          $ref: "#/components/schemas/PageableObject"
+        empty:
+          type: boolean
+    TransactionResponseDto: {}
+    CardResponseDto: {}
+    PageCardResponseDto:
+      type: object
+      properties:
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+        first:
+          type: boolean
+        last:
+          type: boolean
+        size:
+          type: integer
+          format: int32
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/CardResponseDto"
+        number:
+          type: integer
+          format: int32
+        sort:
+          $ref: "#/components/schemas/SortObject"
+        numberOfElements:
+          type: integer
+          format: int32
+        pageable:
+          $ref: "#/components/schemas/PageableObject"
+        empty:
+          type: boolean
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

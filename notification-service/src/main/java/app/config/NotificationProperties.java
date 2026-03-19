@@ -10,8 +10,7 @@ import java.util.Map;
 /**
  * Configuration properties for notification templates and routing keys.
  *
- * @ ConfigurationProperties anotacija sluzi da uzme vrednosti iz `application.properties`
- * i mapira ih u ovaj java objekat
+ * Ucitava vrednosti iz {@code application.properties} i mapira ih u ovaj java objekat.
  */
 @Getter
 @Setter

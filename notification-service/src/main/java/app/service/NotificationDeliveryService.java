@@ -8,12 +8,15 @@ import app.entities.NotificationDeliveryStatus;
 import app.exception.BusinessException;
 import app.exception.ErrorCode;
 import jakarta.annotation.PostConstruct;
+
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.mail.MailAuthenticationException;
+import org.springframework.mail.MailSendException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -21,7 +24,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
-import org.springframework.core.env.Environment;
 
 import java.time.Instant;
 import java.util.Map;
@@ -52,6 +54,7 @@ import java.util.UUID;
  *     zapis vec postoji u bazi i tada se update-uje status i po potrebi zakazuje retry.</li>
  * </ul>
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class NotificationDeliveryService {
@@ -79,11 +82,6 @@ public class NotificationDeliveryService {
      * Configured routing keys map.
      */
     private final Map<String, String> routingKeysMap;
-
-    /**
-     * Spring environment for property access.
-     */
-    private final Environment environment;
 
     /**
      * Configured retry budget per new delivery record.
@@ -180,11 +178,10 @@ public class NotificationDeliveryService {
         ResolvedEmail resolvedEmail = notificationService.resolveEmailContent(req, notificationType);
         String deliveryId = UUID.randomUUID().toString();
         NotificationDelivery delivery = buildPendingDelivery(
-                deliveryId, resolvedEmail, normalizeNotificationType(notificationType)
+                deliveryId, resolvedEmail, notificationType
         );
         notificationDeliveryTxService.createPendingDelivery(delivery);
         runAfterCommit(() -> attemptDelivery(deliveryId));
-//        attemptDelivery(deliveryId);
     }
 
     /**
@@ -214,9 +211,13 @@ public class NotificationDeliveryService {
      */
     @EventListener(ApplicationReadyEvent.class)
     public void loadRetryTasksOnStartup() {
-        Instant now = Instant.now();
-        reloadStartupTasks(NotificationDeliveryStatus.PENDING, now);
-        reloadStartupTasks(NotificationDeliveryStatus.RETRY_SCHEDULED, now);
+        try {
+            Instant now = Instant.now();
+            reloadStartupTasks(NotificationDeliveryStatus.PENDING, now);
+            reloadStartupTasks(NotificationDeliveryStatus.RETRY_SCHEDULED, now);
+        } catch (Exception ex) {
+            log.error("Failed to load retry tasks on startup — pending deliveries may not be rescheduled", ex);
+        }
     }
 
     /**
@@ -253,7 +254,7 @@ public class NotificationDeliveryService {
     ) {
         NotificationDelivery delivery = new NotificationDelivery();
         delivery.setDeliveryId(deliveryId);
-        delivery.setRetryCount(0);
+        delivery.setAttemptCount(0);
         delivery.setMaxRetries(defaultMaxRetries);
         delivery.setStatus(NotificationDeliveryStatus.PENDING);
         delivery.setNotificationType(notificationType);
@@ -282,7 +283,7 @@ public class NotificationDeliveryService {
     ) {
         NotificationDelivery delivery = new NotificationDelivery();
         delivery.setDeliveryId(UUID.randomUUID().toString());
-        delivery.setRetryCount(0);
+        delivery.setAttemptCount(0);
         delivery.setMaxRetries(defaultMaxRetries);
         delivery.setStatus(NotificationDeliveryStatus.FAILED);
         delivery.setNotificationType(notificationType);
@@ -395,7 +396,7 @@ public class NotificationDeliveryService {
      */
     private boolean isRecoverablePending(NotificationDelivery delivery) {
         return delivery.getStatus() == NotificationDeliveryStatus.PENDING
-                && delivery.getRetryCount() < delivery.getMaxRetries();
+                && delivery.getAttemptCount() < delivery.getMaxRetries();
     }
 
     /**
@@ -407,7 +408,7 @@ public class NotificationDeliveryService {
      */
     private boolean isRecoverableScheduledRetry(NotificationDelivery delivery) {
         return delivery.getStatus() == NotificationDeliveryStatus.RETRY_SCHEDULED
-                && delivery.getRetryCount() < delivery.getMaxRetries()
+                && delivery.getAttemptCount() < delivery.getMaxRetries()
                 && delivery.getNextAttemptAt() != null;
     }
 
@@ -504,7 +505,8 @@ public class NotificationDeliveryService {
      * @return trimmed error text up to 1000 characters
      */
     private String trimError(Exception ex) {
-        String error = ex.getClass().getSimpleName();
+        String message = ex.getMessage();
+        String error = ex.getClass().getSimpleName() + (message != null ? ": " + message : "");
         if (error.length() <= MAX_ERROR_LENGTH) {
             return error;
         }
@@ -523,17 +525,32 @@ public class NotificationDeliveryService {
      * @return {@code true} when the failure is considered transient
      */
     private boolean isRetryable(Exception ex) {
-        return !(ex instanceof MailAuthenticationException);
+        if (ex instanceof MailAuthenticationException) {
+            return false;
+        }
+        if (ex instanceof MailSendException mailSendEx) {
+            for (Exception failure : mailSendEx.getFailedMessages().values()) {
+                if (isPermanentSmtpFailure(failure)) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
-    /**
-     * Replaces a missing notification type with the fallback enum value.
-     *
-     * @param notificationType candidate notification type
-     * @return original type or {@link NotificationType#UNKNOWN} when absent
-     */
-    private String normalizeNotificationType(String notificationType) {
-        return notificationType == null ? "UNKNOWN" : notificationType;
+    private static boolean isPermanentSmtpFailure(Exception ex) {
+        String className = ex.getClass().getName();
+        if (className.contains("SMTPAddressFailedException") || className.contains("SMTPSendFailedException")) {
+            String message = ex.getMessage();
+            if (message != null && message.length() >= 3) {
+                char first = message.charAt(0);
+                if (first == '5') return true;
+            }
+        }
+        if (ex.getCause() != null) {
+            return isPermanentSmtpFailure(ex.getCause() instanceof Exception cause ? cause : new RuntimeException(ex.getCause()));
+        }
+        return false;
     }
 
     /**

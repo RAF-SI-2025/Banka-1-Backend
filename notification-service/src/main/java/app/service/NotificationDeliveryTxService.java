@@ -88,7 +88,7 @@ public class NotificationDeliveryTxService {
         notificationDeliveryRepository.findByDeliveryId(deliveryId)
                 .filter(this::isActiveAttemptState)
                 .ifPresent(delivery -> {
-                    delivery.setRetryCount(delivery.getRetryCount() + 1);
+                    delivery.setAttemptCount(delivery.getAttemptCount() + 1);
                     delivery.setStatus(NotificationDeliveryStatus.SUCCEEDED);
                     delivery.setLastAttemptAt(attemptedAt);
                     delivery.setSentAt(attemptedAt);
@@ -128,13 +128,13 @@ public class NotificationDeliveryTxService {
         }
 
         NotificationDelivery delivery = optionalDelivery.get();
-        int updatedRetryCount = delivery.getRetryCount() + 1;
-        delivery.setRetryCount(updatedRetryCount);
+        int updatedAttemptCount = delivery.getAttemptCount() + 1;
+        delivery.setAttemptCount(updatedAttemptCount);
         delivery.setLastAttemptAt(attemptedAt);
         delivery.setSentAt(null);
         delivery.setLastError(error);
 
-        if (retryable && updatedRetryCount < delivery.getMaxRetries()) {
+        if (retryable && updatedAttemptCount < delivery.getMaxRetries()) {
             Instant nextAttemptAt = attemptedAt.plusSeconds(retryDelaySeconds);
             delivery.setStatus(NotificationDeliveryStatus.RETRY_SCHEDULED);
             delivery.setNextAttemptAt(nextAttemptAt);

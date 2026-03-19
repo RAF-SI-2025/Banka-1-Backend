@@ -111,7 +111,7 @@ class NotificationDeliveryServiceUnitTest {
             Instant attemptedAt = invocation.getArgument(1);
             NotificationDelivery delivery = deliveriesById.get(deliveryId);
             if (delivery != null) {
-                delivery.setRetryCount(delivery.getRetryCount());
+                delivery.setAttemptCount(delivery.getAttemptCount() + 1);
                 delivery.setStatus(NotificationDeliveryStatus.SUCCEEDED);
                 delivery.setLastAttemptAt(attemptedAt);
                 delivery.setSentAt(attemptedAt);
@@ -131,8 +131,8 @@ class NotificationDeliveryServiceUnitTest {
                 return null;
             }
 
-            int updatedRetryCount = delivery.getRetryCount() + 1;
-            delivery.setRetryCount(updatedRetryCount);
+            int updatedRetryCount = delivery.getAttemptCount() + 1;
+            delivery.setAttemptCount(updatedRetryCount);
             delivery.setLastAttemptAt(attemptedAt);
             delivery.setSentAt(null);
             delivery.setLastError(error);
@@ -163,7 +163,7 @@ class NotificationDeliveryServiceUnitTest {
                         d.setStatus(NotificationDeliveryStatus.SUCCEEDED);
                         d.setSentAt(now);
                         d.setLastAttemptAt(now);
-                        d.setRetryCount(d.getRetryCount() + 1);
+                        d.setAttemptCount(d.getAttemptCount() + 1);
                         d.setLastError(null);
                         d.setNextAttemptAt(null);
                     });
@@ -199,7 +199,7 @@ class NotificationDeliveryServiceUnitTest {
         NotificationDelivery finalSaved = deliveriesById.get(deliveryCaptor.getValue().getDeliveryId());
 
         assertEquals(NotificationDeliveryStatus.FAILED, finalSaved.getStatus());
-        assertEquals(1, finalSaved.getRetryCount());
+        assertEquals(1, finalSaved.getAttemptCount());
         assertNull(finalSaved.getNextAttemptAt());
         verify(retryTaskQueue, never()).schedule(any(), any());
     }
@@ -293,7 +293,7 @@ class NotificationDeliveryServiceUnitTest {
         delivery.setBody("Body");
         delivery.setStatus(NotificationDeliveryStatus.RETRY_SCHEDULED);
         delivery.setNotificationType("EMPLOYEE_CREATED");
-        delivery.setRetryCount(1);
+        delivery.setAttemptCount(1);
         delivery.setMaxRetries(4);
         delivery.setNextAttemptAt(now.minusSeconds(1));
         deliveriesById.put(delivery.getDeliveryId(), delivery);
@@ -342,7 +342,7 @@ class NotificationDeliveryServiceUnitTest {
         delivery.setBody("Body");
         delivery.setStatus(NotificationDeliveryStatus.RETRY_SCHEDULED);
         delivery.setNotificationType("EMPLOYEE_CREATED");
-        delivery.setRetryCount(1);
+        delivery.setAttemptCount(1);
         delivery.setMaxRetries(4);
         delivery.setNextAttemptAt(now.plusSeconds(60));
         deliveriesById.put(delivery.getDeliveryId(), delivery);
@@ -374,7 +374,7 @@ class NotificationDeliveryServiceUnitTest {
         delivery.setBody("Body");
         delivery.setStatus(NotificationDeliveryStatus.RETRY_SCHEDULED);
         delivery.setNotificationType("EMPLOYEE_CREATED");
-        delivery.setRetryCount(3);
+        delivery.setAttemptCount(3);
         delivery.setMaxRetries(4);
         delivery.setNextAttemptAt(now.minusSeconds(1));
         deliveriesById.put(delivery.getDeliveryId(), delivery);
@@ -389,7 +389,7 @@ class NotificationDeliveryServiceUnitTest {
         NotificationDelivery finalSaved = deliveriesById.get("delivery-1");
 
         assertEquals(NotificationDeliveryStatus.FAILED, finalSaved.getStatus());
-        assertEquals(4, finalSaved.getRetryCount());
+        assertEquals(4, finalSaved.getAttemptCount());
         assertNull(finalSaved.getNextAttemptAt());
         verify(retryTaskQueue, never()).schedule("delivery-1", now.minusSeconds(1));
     }
@@ -426,21 +426,21 @@ class NotificationDeliveryServiceUnitTest {
     void loadRetryTasksOnStartupQueuesOnlyRetryableRecords() {
         NotificationDelivery retryable = new NotificationDelivery();
         retryable.setDeliveryId("delivery-retryable");
-        retryable.setRetryCount(1);
+        retryable.setAttemptCount(1);
         retryable.setMaxRetries(4);
         retryable.setStatus(NotificationDeliveryStatus.RETRY_SCHEDULED);
         retryable.setNextAttemptAt(Instant.parse("2026-03-07T12:00:05Z"));
 
         NotificationDelivery exhausted = new NotificationDelivery();
         exhausted.setDeliveryId("delivery-exhausted");
-        exhausted.setRetryCount(4);
+        exhausted.setAttemptCount(4);
         exhausted.setMaxRetries(4);
         exhausted.setStatus(NotificationDeliveryStatus.RETRY_SCHEDULED);
         exhausted.setNextAttemptAt(Instant.parse("2026-03-07T12:00:10Z"));
 
         NotificationDelivery pending = new NotificationDelivery();
         pending.setDeliveryId("delivery-pending");
-        pending.setRetryCount(0);
+        pending.setAttemptCount(0);
         pending.setMaxRetries(4);
         pending.setStatus(NotificationDeliveryStatus.PENDING);
 
@@ -536,13 +536,13 @@ class NotificationDeliveryServiceUnitTest {
     void loadRetryTasksOnStartupPaginatesThroughMultiplePages() {
         NotificationDelivery p1 = new NotificationDelivery();
         p1.setDeliveryId("delivery-page1");
-        p1.setRetryCount(0);
+        p1.setAttemptCount(0);
         p1.setMaxRetries(4);
         p1.setStatus(NotificationDeliveryStatus.PENDING);
 
         NotificationDelivery p2 = new NotificationDelivery();
         p2.setDeliveryId("delivery-page2");
-        p2.setRetryCount(1);
+        p2.setAttemptCount(1);
         p2.setMaxRetries(4);
         p2.setStatus(NotificationDeliveryStatus.RETRY_SCHEDULED);
         p2.setNextAttemptAt(Instant.parse("2026-03-11T10:00:00Z"));
@@ -595,7 +595,7 @@ class NotificationDeliveryServiceUnitTest {
         delivery.setBody("Body");
         delivery.setStatus(NotificationDeliveryStatus.RETRY_SCHEDULED);
         delivery.setNotificationType("EMPLOYEE_CREATED");
-        delivery.setRetryCount(3);
+        delivery.setAttemptCount(3);
         delivery.setMaxRetries(4);
         delivery.setNextAttemptAt(now.minusSeconds(1));
         deliveriesById.put(delivery.getDeliveryId(), delivery);

@@ -81,7 +81,7 @@ class NotificationDeliveryFlowIntegrationTest {
      * Tests the complete happy-path flow for the employee activation notification.
      *
      * <p>The test verifies that an {@code employee.created} event is mapped to
-     * {@link NotificationType#EMPLOYEE_CREATED}, persisted as a successful delivery, and
+     * {@code EMPLOYEE_CREATED}, persisted as a successful delivery, and
      * rendered into the exact activation email subject/body expected by the recipient.
      *
      * <p>This is important because account activation is the primary onboarding path and must
@@ -111,7 +111,7 @@ class NotificationDeliveryFlowIntegrationTest {
                 delivery.getBody()
         );
         assertEquals(NotificationDeliveryStatus.SUCCEEDED, delivery.getStatus());
-        assertEquals(1, delivery.getRetryCount());
+        assertEquals(1, delivery.getAttemptCount());
         assertNotNull(delivery.getSentAt());
         assertNull(delivery.getNextAttemptAt());
         assertNull(delivery.getLastError());
@@ -129,7 +129,7 @@ class NotificationDeliveryFlowIntegrationTest {
      *
      * <p>The test verifies that the routing key used by {@code user-service},
      * {@code employee.password_reset}, resolves to
-     * {@link NotificationType#EMPLOYEE_PASSWORD_RESET}, produces a successful delivery record,
+     * {@code EMPLOYEE_PASSWORD_RESET}, produces a successful delivery record,
      * and sends the final rendered reset email with the expected link.
      *
      * <p>This test exists because password reset was one of the exact notification types that
@@ -159,7 +159,7 @@ class NotificationDeliveryFlowIntegrationTest {
                 delivery.getBody()
         );
         assertEquals(NotificationDeliveryStatus.SUCCEEDED, delivery.getStatus());
-        assertEquals(1, delivery.getRetryCount());
+        assertEquals(1, delivery.getAttemptCount());
         assertNotNull(delivery.getSentAt());
         assertNull(delivery.getNextAttemptAt());
         assertNull(delivery.getLastError());
@@ -176,7 +176,7 @@ class NotificationDeliveryFlowIntegrationTest {
      * Tests the complete happy-path flow for the employee account-deactivation notification.
      *
      * <p>The test verifies that an {@code employee.account_deactivated} event resolves to
-     * {@link NotificationType#EMPLOYEE_ACCOUNT_DEACTIVATED}, is stored as a successful
+     * {@code EMPLOYEE_ACCOUNT_DEACTIVATED}, is stored as a successful
      * notification delivery, and generates the expected deactivation email text.
      *
      * <p>The purpose of this test is to ensure that all three supported employee notification
@@ -200,7 +200,7 @@ class NotificationDeliveryFlowIntegrationTest {
         assertEquals("Account Deactivation Email", delivery.getSubject());
         assertEquals("Zdravo Andrija, vas nalog je deaktiviran.", delivery.getBody());
         assertEquals(NotificationDeliveryStatus.SUCCEEDED, delivery.getStatus());
-        assertEquals(1, delivery.getRetryCount());
+        assertEquals(1, delivery.getAttemptCount());
         assertNotNull(delivery.getSentAt());
         assertNull(delivery.getNextAttemptAt());
         assertNull(delivery.getLastError());
@@ -208,6 +208,117 @@ class NotificationDeliveryFlowIntegrationTest {
         assertArrayEquals(new String[]{TEST_EMAIL}, sentMessage.getTo());
         assertEquals("Account Deactivation Email", sentMessage.getSubject());
         assertEquals("Zdravo Andrija, vas nalog je deaktiviran.", sentMessage.getText());
+    }
+
+    /**
+     * Tests the complete happy-path flow for the client account-creation notification.
+     *
+     * <p>Verifies that a {@code client.created} event resolves to {@code CLIENT_CREATED},
+     * persists as a succeeded delivery, and renders the expected activation email body.
+     */
+    @Test
+    void clientCreatedEventPersistsSucceededDeliveryAndSendsActivationEmail() {
+        NotificationRequest request = new NotificationRequest(
+                "Marko",
+                TEST_EMAIL,
+                Map.of(
+                        "name", "Marko",
+                        "activationLink", "https://example.com/activate/456"
+                )
+        );
+
+        notificationDeliveryService.handleIncomingMessage(request, RoutingKeys.CLIENT_CREATED);
+
+        NotificationDelivery delivery = waitForSucceededDelivery();
+        SimpleMailMessage sentMessage = recordingMailSender.singleSentMessage();
+
+        assertEquals("CLIENT_CREATED", delivery.getNotificationType());
+        assertEquals(TEST_EMAIL, delivery.getRecipientEmail());
+        assertEquals("Client Account Activation Email", delivery.getSubject());
+        assertEquals(
+                "Zdravo Marko, vas klijentski nalog je kreiran. Aktivirajte nalog klikom na link:\nhttps://example.com/activate/456",
+                delivery.getBody()
+        );
+        assertEquals(NotificationDeliveryStatus.SUCCEEDED, delivery.getStatus());
+        assertEquals(1, delivery.getAttemptCount());
+        assertNotNull(delivery.getSentAt());
+        assertNull(delivery.getNextAttemptAt());
+        assertNull(delivery.getLastError());
+
+        assertArrayEquals(new String[]{TEST_EMAIL}, sentMessage.getTo());
+        assertEquals("Client Account Activation Email", sentMessage.getSubject());
+    }
+
+    /**
+     * Tests the complete happy-path flow for the client password-reset notification.
+     *
+     * <p>Verifies that a {@code client.password_reset} event resolves to
+     * {@code CLIENT_PASSWORD_RESET} and sends the correct reset email.
+     */
+    @Test
+    void clientPasswordResetEventPersistsSucceededDeliveryAndSendsResetEmail() {
+        NotificationRequest request = new NotificationRequest(
+                "Marko",
+                TEST_EMAIL,
+                Map.of(
+                        "name", "Marko",
+                        "resetLink", "https://example.com/reset/456"
+                )
+        );
+
+        notificationDeliveryService.handleIncomingMessage(request, RoutingKeys.CLIENT_PASSWORD_RESET);
+
+        NotificationDelivery delivery = waitForSucceededDelivery();
+        SimpleMailMessage sentMessage = recordingMailSender.singleSentMessage();
+
+        assertEquals("CLIENT_PASSWORD_RESET", delivery.getNotificationType());
+        assertEquals(TEST_EMAIL, delivery.getRecipientEmail());
+        assertEquals("Client Password Reset Email", delivery.getSubject());
+        assertEquals(
+                "Zdravo Marko, resetujte lozinku klikom na link:\nhttps://example.com/reset/456",
+                delivery.getBody()
+        );
+        assertEquals(NotificationDeliveryStatus.SUCCEEDED, delivery.getStatus());
+        assertEquals(1, delivery.getAttemptCount());
+        assertNotNull(delivery.getSentAt());
+        assertNull(delivery.getNextAttemptAt());
+        assertNull(delivery.getLastError());
+
+        assertArrayEquals(new String[]{TEST_EMAIL}, sentMessage.getTo());
+        assertEquals("Client Password Reset Email", sentMessage.getSubject());
+    }
+
+    /**
+     * Tests the complete happy-path flow for the client account-deactivation notification.
+     *
+     * <p>Verifies that a {@code client.account_deactivated} event resolves to
+     * {@code CLIENT_ACCOUNT_DEACTIVATED} and sends the correct deactivation email.
+     */
+    @Test
+    void clientAccountDeactivatedEventPersistsSucceededDeliveryAndSendsDeactivationEmail() {
+        NotificationRequest request = new NotificationRequest(
+                "Marko",
+                TEST_EMAIL,
+                Map.of("name", "Marko")
+        );
+
+        notificationDeliveryService.handleIncomingMessage(request, RoutingKeys.CLIENT_ACCOUNT_DEACTIVATED);
+
+        NotificationDelivery delivery = waitForSucceededDelivery();
+        SimpleMailMessage sentMessage = recordingMailSender.singleSentMessage();
+
+        assertEquals("CLIENT_ACCOUNT_DEACTIVATED", delivery.getNotificationType());
+        assertEquals(TEST_EMAIL, delivery.getRecipientEmail());
+        assertEquals("Client Account Deactivation Email", delivery.getSubject());
+        assertEquals("Zdravo Marko, vas klijentski nalog je deaktiviran.", delivery.getBody());
+        assertEquals(NotificationDeliveryStatus.SUCCEEDED, delivery.getStatus());
+        assertEquals(1, delivery.getAttemptCount());
+        assertNotNull(delivery.getSentAt());
+        assertNull(delivery.getNextAttemptAt());
+        assertNull(delivery.getLastError());
+
+        assertArrayEquals(new String[]{TEST_EMAIL}, sentMessage.getTo());
+        assertEquals("Client Account Deactivation Email", sentMessage.getSubject());
     }
 
     /**

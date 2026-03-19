@@ -2,7 +2,7 @@ package app.entities;
 
 /**
  * Konstante za routing key-eve koje se koriste u RabbitMQ porukama.
- * Ove vrednosti se koriste za mapiranje na NotificationType.
+ * Ove vrednosti se mapiraju na tipove notifikacija definisane u application.properties.
  */
 public final class RoutingKeys {
     /**

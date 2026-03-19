@@ -65,9 +65,6 @@ checkstyle {
     configFile = rootProject.file('checkstyle.xml')
 }
 
-tasks.withType(Checkstyle).configureEach {
-    ignoreFailures = true
-}
 
 jacocoTestReport {
     dependsOn test

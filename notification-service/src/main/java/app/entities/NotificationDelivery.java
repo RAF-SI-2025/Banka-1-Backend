@@ -67,10 +67,10 @@ public class NotificationDelivery {
     private String notificationType;
 
     /**
-     * Number of failed attempts already performed.
+     * Total number of send attempts performed (including the initial attempt).
      */
-    @Column(nullable = false)
-    private int retryCount;
+    @Column(name = "retry_count", nullable = false)
+    private int attemptCount;
 
     /**
      * Maximum failed attempts allowed before terminal failure.

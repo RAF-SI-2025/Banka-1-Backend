@@ -104,7 +104,7 @@ class NotificationRetryIntegrationTest {
         });
         NotificationDelivery scheduled = singleDelivery();
         assertEquals(NotificationDeliveryStatus.RETRY_SCHEDULED, scheduled.getStatus());
-        assertEquals(1, scheduled.getRetryCount());
+        assertEquals(1, scheduled.getAttemptCount());
         assertNotNull(scheduled.getNextAttemptAt());
         assertEquals(7, Duration.between(scheduled.getLastAttemptAt(), scheduled.getNextAttemptAt()).getSeconds());
         assertEquals(1, controlledMailSender.attemptCount());
@@ -115,7 +115,7 @@ class NotificationRetryIntegrationTest {
 
         NotificationDelivery succeeded = deliveryById(scheduled.getDeliveryId());
         assertEquals(NotificationDeliveryStatus.SUCCEEDED, succeeded.getStatus());
-        assertEquals(2, succeeded.getRetryCount());
+        assertEquals(2, succeeded.getAttemptCount());
         assertNotNull(succeeded.getSentAt());
         assertNull(succeeded.getNextAttemptAt());
         assertNull(succeeded.getLastError());
@@ -152,7 +152,7 @@ class NotificationRetryIntegrationTest {
         });
         NotificationDelivery delivery = singleDelivery();
         assertEquals(NotificationDeliveryStatus.RETRY_SCHEDULED, delivery.getStatus());
-        assertEquals(1, delivery.getRetryCount());
+        assertEquals(1, delivery.getAttemptCount());
 
         while (delivery.getStatus() == NotificationDeliveryStatus.RETRY_SCHEDULED) {
             makeRetryDue(delivery.getDeliveryId());
@@ -161,7 +161,7 @@ class NotificationRetryIntegrationTest {
         }
 
         assertEquals(NotificationDeliveryStatus.FAILED, delivery.getStatus());
-        assertEquals(4, delivery.getRetryCount());
+        assertEquals(4, delivery.getAttemptCount());
         assertNull(delivery.getNextAttemptAt());
         assertNull(delivery.getSentAt());
         assertTrue(delivery.getLastError().contains("IllegalStateException"));

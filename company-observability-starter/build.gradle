@@ -29,6 +29,7 @@ dependencies {
 	implementation 'io.micrometer:micrometer-tracing-bridge-otel'
 	implementation 'net.logstash.logback:logstash-logback-encoder:9.0'
 	implementation 'org.springframework.boot:spring-boot-starter-opentelemetry'
+	implementation 'io.opentelemetry:opentelemetry-exporter-otlp'
 	compileOnly 'org.springframework.security:spring-security-core'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-core'

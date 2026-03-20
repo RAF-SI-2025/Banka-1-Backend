@@ -6,6 +6,8 @@ info:
 servers:
 - url: http://localhost:8084
   description: Generated server url
+security:
+- bearerAuth: []
 paths:
   /employee/cards/{id}:
     put:

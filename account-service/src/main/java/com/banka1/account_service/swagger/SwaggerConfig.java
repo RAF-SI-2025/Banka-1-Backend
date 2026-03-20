@@ -18,9 +18,9 @@ public class SwaggerConfig {
                         .title("Account service API")
                         .description("API for accounts")
                         .version("1.0"))
-                .addSecurityItem(new SecurityRequirement().addList("BearerAuthentication"))
+                .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
                 .components(new Components()
-                        .addSecuritySchemes("BearerAuthentication",
+                        .addSecuritySchemes("bearerAuth",
                                 new SecurityScheme()
                                         .type(SecurityScheme.Type.HTTP)
                                         .scheme("bearer")

@@ -10,3 +10,5 @@ include 'security-lib'
 include 'employee-service'
 include 'client-service'
 include 'account-service'
+include 'exchange-service'
+

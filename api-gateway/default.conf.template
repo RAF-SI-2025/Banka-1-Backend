@@ -10,6 +10,10 @@ upstream account_service {
     server account-service:${ACCOUNT_SERVICE_PORT};
 }
 
+upstream exchange_service {
+    server exchange-service:${EXCHANGE_SERVER_PORT};
+}
+
 server {
     listen 80;
     server_name localhost;
@@ -42,6 +46,20 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Prefix /accounts;
+    }
+
+    location = /api/exchange {
+        return 301 /api/exchange/;
+    }
+
+    # Exchange Service (all routes under /api/exchange/ prefix)
+    location /api/exchange/ {
+        proxy_pass http://exchange_service/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Prefix /api/exchange;
     }
 
     # Health check

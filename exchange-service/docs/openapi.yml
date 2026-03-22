@@ -1,0 +1,36 @@
+openapi: 3.0.3
+info:
+  title: Exchange Service API
+  version: 0.0.1
+  description: Minimal setup contract for exchange-rate and currency-conversion capabilities.
+servers:
+  - url: http://localhost:8085
+    description: Direct service access
+  - url: http://localhost/api/exchange
+    description: API gateway access
+paths:
+  /info:
+    get:
+      summary: Return basic service metadata
+      operationId: getExchangeServiceInfo
+      responses:
+        '200':
+          description: Service metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - service
+                  - status
+                  - gatewayPrefix
+                properties:
+                  service:
+                    type: string
+                    example: exchange-service
+                  status:
+                    type: string
+                    example: UP
+                  gatewayPrefix:
+                    type: string
+                    example: /api/exchange

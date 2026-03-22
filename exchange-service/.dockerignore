@@ -1,0 +1,9 @@
+.git
+.github
+.gradle
+build
+**/build
+node_modules
+*.iml
+.idea
+setup/.env

@@ -1,0 +1,130 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: notification-service
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: notification-service
+          service: notification-service
+          __path__: /var/log/services/notification/*.log
+    pipeline_stages:
+      - json:
+          expressions:
+            level: level
+            serviceName: serviceName
+            traceId: traceId
+            spanId: spanId
+            correlationId: correlationId
+            logger: logger
+      - labels:
+          level:
+          serviceName:
+          traceId:
+          spanId:
+          correlationId:
+          logger:
+
+  - job_name: employee-service
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: employee-service
+          service: employee-service
+          __path__: /var/log/services/employee/*.log
+    pipeline_stages:
+      - json:
+          expressions:
+            level: level
+            serviceName: serviceName
+            traceId: traceId
+            spanId: spanId
+            correlationId: correlationId
+            logger: logger
+      - labels:
+          level:
+          serviceName:
+          traceId:
+          spanId:
+          correlationId:
+          logger:
+
+  - job_name: client-service
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: client-service
+          service: client-service
+          __path__: /var/log/services/client/*.log
+    pipeline_stages:
+      - json:
+          expressions:
+            level: level
+            serviceName: serviceName
+            traceId: traceId
+            spanId: spanId
+            correlationId: correlationId
+            logger: logger
+      - labels:
+          level:
+          serviceName:
+          traceId:
+          spanId:
+          correlationId:
+          logger:
+
+  - job_name: account-service
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: account-service
+          service: account-service
+          __path__: /var/log/services/account/*.log
+    pipeline_stages:
+      - json:
+          expressions:
+            level: level
+            serviceName: serviceName
+            traceId: traceId
+            spanId: spanId
+            correlationId: correlationId
+            logger: logger
+      - labels:
+          level:
+          serviceName:
+          traceId:
+          spanId:
+          correlationId:
+          logger:
+
+  - job_name: exchange-service
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: exchange-service
+          service: exchange-service
+          __path__: /var/log/services/exchange/*.log
+    pipeline_stages:
+      - json:
+          expressions:
+            level: level
+            serviceName: serviceName
+            traceId: traceId
+            spanId: spanId
+            correlationId: correlationId
+            logger: logger
+      - labels:
+          level:
+          serviceName:
+          traceId:
+          spanId:
+          correlationId:
+          logger:

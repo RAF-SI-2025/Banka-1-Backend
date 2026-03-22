@@ -1,0 +1,6 @@
+rootProject.name = 'exchange-service'
+
+include ':company-observability-starter'
+include ':security-lib'
+project(':company-observability-starter').projectDir = file('../company-observability-starter')
+project(':security-lib').projectDir = file('../security-lib')

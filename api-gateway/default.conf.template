@@ -14,6 +14,10 @@ upstream exchange_service {
     server exchange-service:${EXCHANGE_SERVER_PORT};
 }
 
+upstream verification_service {
+    server verification-service:${VERIFICATION_SERVER_PORT};
+}
+
 server {
     listen 80;
     server_name localhost;
@@ -60,6 +64,16 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Prefix /api/exchange;
+    }
+
+    # Verification Service (all routes under /verification/ prefix)
+    location /verification/ {
+        proxy_pass http://verification_service/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Prefix /verification;
     }
 
     # Health check

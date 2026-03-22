@@ -1,0 +1,86 @@
+services:
+  postgres_verification:
+    image: postgres:16
+    container_name: postgres_verification
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${VERIFICATION_DB_NAME}
+      POSTGRES_USER: ${VERIFICATION_DB_USER}
+      POSTGRES_PASSWORD: ${VERIFICATION_DB_PASSWORD}
+    ports:
+      - "${VERIFICATION_DB_EXTERNAL_PORT}:${VERIFICATION_DB_INTERNAL_PORT}"
+    volumes:
+      - postgres_verification_data:/var/lib/postgresql/data
+    networks:
+      - banka-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${VERIFICATION_DB_USER} -d ${VERIFICATION_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    ports:
+      - "${RABBITMQ_PORT}:${RABBITMQ_PORT}"
+      - "${RABBITMQ_MANAGEMENT_PORT}:${RABBITMQ_MANAGEMENT_PORT}"
+    networks:
+      - banka-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  verification-service:
+    build:
+      context: ..
+      dockerfile: verification-service/Dockerfile
+    container_name: verification-service
+    restart: unless-stopped
+    depends_on:
+      postgres_verification:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      VERIFICATION_SERVER_PORT: ${VERIFICATION_SERVER_PORT}
+
+      VERIFICATION_DB_HOST: postgres_verification
+      VERIFICATION_DB_PORT: ${VERIFICATION_DB_INTERNAL_PORT}
+      VERIFICATION_DB_NAME: ${VERIFICATION_DB_NAME}
+      VERIFICATION_DB_USER: ${VERIFICATION_DB_USER}
+      VERIFICATION_DB_PASSWORD: ${VERIFICATION_DB_PASSWORD}
+
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: ${RABBITMQ_PORT}
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+
+      NOTIFICATION_QUEUE: ${NOTIFICATION_QUEUE}
+      NOTIFICATION_EXCHANGE: ${NOTIFICATION_EXCHANGE}
+      NOTIFICATION_ROUTING_KEY: ${NOTIFICATION_ROUTING_KEY}
+
+      JWT_SECRET: ${JWT_SECRET}
+    ports:
+      - "${VERIFICATION_SERVER_PORT}:${VERIFICATION_SERVER_PORT}"
+    networks:
+      - banka-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:${VERIFICATION_SERVER_PORT}/actuator/health/liveness || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+volumes:
+  postgres_verification_data:
+
+networks:
+  banka-network:
+    driver: bridge

@@ -11,4 +11,5 @@ include 'employee-service'
 include 'client-service'
 include 'account-service'
 include 'exchange-service'
+include 'verification-service'
 

@@ -114,6 +114,29 @@ services:
       timeout: 5s
       retries: 10
 
+  # Postgres for Verification Service
+  postgres_verification:
+    image: postgres:16
+    container_name: postgres_verification_db
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${VERIFICATION_DB_NAME:-verificationdb}
+      POSTGRES_USER: ${VERIFICATION_DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${VERIFICATION_DB_PASSWORD:-postgres}
+    ports:
+      - "${VERIFICATION_DB_EX_PORT:-5438}:5432"
+    volumes:
+      - postgres-verification-data:/var/lib/postgresql/data
+    networks:
+      - banka-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${VERIFICATION_DB_USER:-postgres} -d ${VERIFICATION_DB_NAME:-verificationdb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   # RabbitMQ (shared)
   rabbitmq:
     image: rabbitmq:3-management
@@ -199,6 +222,7 @@ services:
       - client-service-logs:/var/log/services/client:ro
       - account-service-logs:/var/log/services/account:ro
       - exchange-service-logs:/var/log/services/exchange:ro
+      - verification-service-logs:/var/log/services/verification:ro
     depends_on:
       - loki
     networks:
@@ -467,6 +491,60 @@ services:
       retries: 10
       start_period: 30s
 
+  # Verification Service
+  verification-service:
+    build:
+      context: ..
+      dockerfile: verification-service/Dockerfile
+      args:
+        SERVER_PORT: ${VERIFICATION_SERVER_PORT:-8086}
+    container_name: banka_verification_service
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      VERIFICATION_SERVER_PORT: ${VERIFICATION_SERVER_PORT:-8086}
+      VERIFICATION_DB_HOST: postgres_verification
+      VERIFICATION_DB_PORT: 5432
+      VERIFICATION_DB_NAME: ${VERIFICATION_DB_NAME:-verificationdb}
+      VERIFICATION_DB_USER: ${VERIFICATION_DB_USER:-postgres}
+      VERIFICATION_DB_PASSWORD: ${VERIFICATION_DB_PASSWORD:-postgres}
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-guest}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      NOTIFICATION_QUEUE: ${NOTIFICATION_QUEUE}
+      NOTIFICATION_EXCHANGE: ${NOTIFICATION_EXCHANGE}
+      NOTIFICATION_ROUTING_KEY: ${NOTIFICATION_ROUTING_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      MANAGEMENT_OTLP_METRICS_EXPORT_URL: http://otel-collector:4318/v1/metrics
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: http://otel-collector:4318/v1/traces
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
+      OTEL_SERVICE_NAME: verificationService
+      LOGGING_FILE_PATH: /var/log/banka
+    depends_on:
+      postgres_verification:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    expose:
+      - "${VERIFICATION_SERVER_PORT:-8086}"
+    networks:
+      - banka-network
+    volumes:
+      - verification-service-logs:/var/log/banka
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:${VERIFICATION_SERVER_PORT:-8086}/actuator/health/liveness || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
   api-gateway:
     build:
       context: ..
@@ -482,6 +560,7 @@ services:
       CLIENT_SERVICE_PORT: ${CLIENT_SERVER_PORT:-8083}
       ACCOUNT_SERVICE_PORT: ${ACCOUNT_SERVER_PORT:-8084}
       EXCHANGE_SERVER_PORT: ${EXCHANGE_SERVER_PORT:-8085}
+      VERIFICATION_SERVER_PORT: ${VERIFICATION_SERVER_PORT:-8086}
     depends_on:
       employee-service:
         condition: service_healthy
@@ -490,6 +569,8 @@ services:
       account-service:
         condition: service_healthy
       exchange-service:
+        condition: service_healthy
+      verification-service:
         condition: service_healthy
     networks:
       - banka-network
@@ -510,6 +591,7 @@ volumes:
   postgres-client-data:
   postgres-account-data:
   postgres-exchange-data:
+  postgres-verification-data:
   grafana-data:
   loki-data:
   notification-service-logs:
@@ -517,3 +599,4 @@ volumes:
   client-service-logs:
   account-service-logs:
   exchange-service-logs:
+  verification-service-logs:

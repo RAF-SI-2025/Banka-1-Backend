@@ -128,3 +128,27 @@ scrape_configs:
           spanId:
           correlationId:
           logger:
+
+  - job_name: verification-service
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: verification-service
+          service: verification-service
+          __path__: /var/log/services/verification/*.log
+    pipeline_stages:
+      - json:
+          expressions:
+            level: level
+            serviceName: serviceName
+            traceId: traceId
+            spanId: spanId
+            correlationId: correlationId
+            logger: logger
+      - labels:
+          level:
+          serviceName:
+          traceId:
+          spanId:
+          correlationId:
+          logger:

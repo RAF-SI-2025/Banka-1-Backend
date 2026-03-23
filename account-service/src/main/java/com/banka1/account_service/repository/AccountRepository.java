@@ -11,12 +11,15 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface AccountRepository extends JpaRepository<Account,Long> {
     boolean existsByBrojRacuna(String brojRacuna);
 
     Page<Account> findByVlasnikAndStatus(Long id, Status status, Pageable pageable);
+
+    Optional<Account> findByBrojRacuna(String brojRacuna);
 
 
 

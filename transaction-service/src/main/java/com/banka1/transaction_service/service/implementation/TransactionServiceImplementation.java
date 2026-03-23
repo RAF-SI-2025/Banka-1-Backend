@@ -1,6 +1,6 @@
 package com.banka1.transaction_service.service.implementation;
 
-import com.banka1.transaction_service.domain.TransactionStatus;
+import com.banka1.transaction_service.domain.enums.TransactionStatus;
 import com.banka1.transaction_service.dto.request.ApproveDto;
 import com.banka1.transaction_service.dto.request.NewPaymentDto;
 import com.banka1.transaction_service.dto.response.TransactionResponseDto;
@@ -26,6 +26,7 @@ public class TransactionServiceImplementation implements TransactionService {
 
     //todo za sad ovo ostavljam ovde, validacije bi trebalo da budu zaseban servis, if-ove sam ostavio just in case
     //TODO menjati exceptione
+
 //    private void  validation(AccountDto account,Jwt jwt)
 //    {
 //        if(account==null)

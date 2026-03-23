@@ -2,6 +2,8 @@ package com.banka1.account_service.advice;
 
 
 import com.banka1.account_service.dto.response.ErrorResponseDto;
+import com.banka1.account_service.exception.BusinessException;
+import com.banka1.account_service.exception.ErrorCode;
 import org.springframework.amqp.AmqpException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -104,22 +106,22 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-//    /**
-//     * Obradjuje poznate biznis izuzetke i mapira ih na odgovarajuci HTTP status.
-//     *
-//     * @param ex biznis izuzetak koji sadrzi domen-specifican kod greske
-//     * @return odgovor sa detaljima biznis greske i HTTP statusom iz {@link ErrorCode}
-//     */
-//    @ExceptionHandler(BusinessException.class)
-//    public ResponseEntity<ErrorResponseDto> handleBusinessException(BusinessException ex) {
-//        ErrorCode errorCode = ex.getErrorCode();
-//        ErrorResponseDto error = new ErrorResponseDto(
-//                errorCode.getCode(),
-//                errorCode.getTitle(),
-//                ex.getMessage()
-//        );
-//        return new ResponseEntity<>(error, errorCode.getHttpStatus());
-//    }
+    /**
+     * Obradjuje poznate biznis izuzetke i mapira ih na odgovarajuci HTTP status.
+     *
+     * @param ex biznis izuzetak koji sadrzi domen-specifican kod greske
+     * @return odgovor sa detaljima biznis greske i HTTP statusom iz {@link ErrorCode}
+     */
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ErrorResponseDto> handleBusinessException(BusinessException ex) {
+        ErrorCode errorCode = ex.getErrorCode();
+        ErrorResponseDto error = new ErrorResponseDto(
+                errorCode.getCode(),
+                errorCode.getTitle(),
+                ex.getMessage()
+        );
+        return new ResponseEntity<>(error, errorCode.getHttpStatus());
+    }
 
     /**
      * Obradjuje greske validacije DTO zahteva i vraca listu neispravnih polja.

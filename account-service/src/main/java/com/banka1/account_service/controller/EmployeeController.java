@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.*;
 @AllArgsConstructor
 @RequestMapping("/employee")
 //todo autorizacija
-@PreAuthorize("hasRole('BASIC')")
+
 public class EmployeeController {
 
     private EmployeeService employeeService;
@@ -38,6 +38,7 @@ public class EmployeeController {
         @ApiResponse(responseCode = "403", description = "Forbidden",
             content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
     })
+    @PreAuthorize("hasRole('BASIC')")
     @PostMapping("/accounts/checking")
     public ResponseEntity<String> createCheckingAccount(@AuthenticationPrincipal Jwt jwt,@RequestBody @Valid CheckingDto checkingDto) {
         return new ResponseEntity<>(employeeService.createCheckingAccount(jwt,checkingDto), HttpStatus.OK);
@@ -52,6 +53,7 @@ public class EmployeeController {
         @ApiResponse(responseCode = "403", description = "Forbidden",
             content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
     })
+    @PreAuthorize("hasRole('BASIC')")
     @PostMapping("/accounts/fx")
     public ResponseEntity<String> createFxAccount(@AuthenticationPrincipal Jwt jwt,@RequestBody @Valid FxDto fxDto) {
         return new ResponseEntity<>(employeeService.createFxAccount(jwt,fxDto), HttpStatus.OK);
@@ -64,6 +66,7 @@ public class EmployeeController {
         @ApiResponse(responseCode = "403", description = "Forbidden",
             content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
     })
+    @PreAuthorize("hasAnyRole('BASIC','SERVICE')")
     @GetMapping("/accounts")
     public ResponseEntity<Page<AccountSearchResponseDto>> searchAllAccounts(@AuthenticationPrincipal Jwt jwt,
                                                                             @RequestParam(required = false) String imeVlasnikaRacuna,
@@ -75,20 +78,23 @@ public class EmployeeController {
         return new ResponseEntity<>(employeeService.searchAllAccounts(jwt,imeVlasnikaRacuna,prezimeVlasnikaRacuna,accountNumber,page,size), HttpStatus.OK);
     }
 
-    @Operation(summary = "Update card status")
-    @ApiResponses({
-        @ApiResponse(responseCode = "400", description = "Invalid request body",
-            content = @Content(schema = @Schema(implementation = ErrorResponseDto.class))),
-        @ApiResponse(responseCode = "401", description = "Unauthorized",
-            content = @Content(schema = @Schema(implementation = ErrorResponseDto.class))),
-        @ApiResponse(responseCode = "403", description = "Forbidden",
-            content = @Content(schema = @Schema(implementation = ErrorResponseDto.class))),
-        @ApiResponse(responseCode = "404", description = "Card not found",
-            content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
-    })
-    @PutMapping("/cards/{id}")
-    public ResponseEntity<String> updateCard(@AuthenticationPrincipal Jwt jwt,@PathVariable Long id,@RequestBody @Valid UpdateCardDto updateCardDto)
-    {
-        return new ResponseEntity<>(employeeService.updateCard(jwt,id,updateCardDto), HttpStatus.OK);
-    }
+
+
+//    @Operation(summary = "Update card status")
+//    @ApiResponses({
+//        @ApiResponse(responseCode = "400", description = "Invalid request body",
+//            content = @Content(schema = @Schema(implementation = ErrorResponseDto.class))),
+//        @ApiResponse(responseCode = "401", description = "Unauthorized",
+//            content = @Content(schema = @Schema(implementation = ErrorResponseDto.class))),
+//        @ApiResponse(responseCode = "403", description = "Forbidden",
+//            content = @Content(schema = @Schema(implementation = ErrorResponseDto.class))),
+//        @ApiResponse(responseCode = "404", description = "Card not found",
+//            content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
+//    })
+//    @PreAuthorize("hasRole('BASIC')")
+//    @PutMapping("/cards/{id}")
+//    public ResponseEntity<String> updateCard(@AuthenticationPrincipal Jwt jwt,@PathVariable Long id,@RequestBody @Valid UpdateCardDto updateCardDto)
+//    {
+//        return new ResponseEntity<>(employeeService.updateCard(jwt,id,updateCardDto), HttpStatus.OK);
+//    }
 }

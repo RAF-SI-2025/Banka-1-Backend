@@ -1,6 +1,6 @@
 package com.banka1.transaction_service.controller;
 
-import com.banka1.transaction_service.domain.TransactionStatus;
+import com.banka1.transaction_service.domain.enums.TransactionStatus;
 import com.banka1.transaction_service.dto.request.ApproveDto;
 import com.banka1.transaction_service.dto.request.NewPaymentDto;
 import com.banka1.transaction_service.dto.response.ErrorResponseDto;

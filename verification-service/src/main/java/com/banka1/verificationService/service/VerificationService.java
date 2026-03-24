@@ -5,6 +5,8 @@ import com.banka1.verificationService.dto.request.GenerateRequest;
 import com.banka1.verificationService.dto.request.ValidateRequest;
 import com.banka1.verificationService.dto.response.GenerateResponse;
 import com.banka1.verificationService.dto.response.ValidateResponse;
+import com.banka1.verificationService.exception.BusinessException;
+import com.banka1.verificationService.exception.ErrorCode;
 import com.banka1.verificationService.model.entity.VerificationSession;
 import com.banka1.verificationService.model.enums.VerificationStatus;
 import com.banka1.verificationService.repository.VerificationSessionRepository;
@@ -16,7 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.NoSuchElementException;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -91,22 +92,22 @@ public class VerificationService {
     @Transactional
     public ValidateResponse validate(ValidateRequest request) {
         VerificationSession session = repository.findById(request.getSessionId())
-                .orElseThrow(() -> new NoSuchElementException("Verification session not found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.VERIFICATION_SESSION_NOT_FOUND, "Session ID: " + request.getSessionId()));
 
         // 1. status check
         if (session.getStatus() == VerificationStatus.CANCELLED) {
-            throw new IllegalArgumentException("Verification session is cancelled");
+            throw new BusinessException(ErrorCode.VERIFICATION_SESSION_CANCELLED, "Session ID: " + request.getSessionId());
         }
 
         if (session.getStatus() == VerificationStatus.VERIFIED) {
-            throw new IllegalArgumentException("Verification session is already verified");
+            throw new BusinessException(ErrorCode.VERIFICATION_SESSION_ALREADY_VERIFIED, "Session ID: " + request.getSessionId());
         }
 
         // 2. expiration check
         if (LocalDateTime.now().isAfter(session.getExpiresAt())) {
             session.setStatus(VerificationStatus.EXPIRED);
             repository.save(session);
-            throw new IllegalArgumentException("Verification code has expired");
+            throw new BusinessException(ErrorCode.VERIFICATION_CODE_EXPIRED, "Session ID: " + request.getSessionId());
         }
 
         // 3. validate code
@@ -142,7 +143,7 @@ public class VerificationService {
     @Transactional
     public VerificationStatus getStatus(Long sessionId) {
         VerificationSession session = repository.findById(sessionId)
-                .orElseThrow(() -> new NoSuchElementException("Verification session not found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.VERIFICATION_SESSION_NOT_FOUND, "Session ID: " + sessionId));
 
         // Optional: auto-expire check
         if (session.getStatus() == VerificationStatus.PENDING &&

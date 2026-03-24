@@ -1,6 +1,7 @@
 package com.banka1.verificationService.advice;
 
 import com.banka1.verificationService.dto.response.ErrorResponseDto;
+import com.banka1.verificationService.exception.BusinessException;
 import org.springframework.amqp.AmqpException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -14,15 +15,30 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.NoSuchElementException;
 
 /**
- * Centralizovani hendler gresaka za sve REST kontrolere verification servisa.
- * Mapira ocekivane i neocekivane izuzetke na standardizovane HTTP odgovore sa {@link ErrorResponseDto} telom.
+ * Centralizovani handler grešaka za sve REST kontrolere verification servisa.
+ * Mapira očekivane i neočekivane izuzetke na standardizovane HTTP odgovore sa {@link ErrorResponseDto} telom.
  */
 @RestControllerAdvice
 @Component("verificationServiceGlobalExceptionHandler")
 public class GlobalExceptionHandler {
+
+    /**
+     * Obradjuje poslovne greške aplikacije.
+     *
+     * @param ex izuzetak nastao pri poslovnoj grešci
+     * @return HTTP odgovor na osnovu ErrorCode-a
+     */
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ErrorResponseDto> handleBusinessException(BusinessException ex) {
+        ErrorResponseDto error = new ErrorResponseDto(
+                ex.getErrorCode().getCode(),
+                ex.getErrorCode().getTitle(),
+                ex.getDetails()
+        );
+        return new ResponseEntity<>(error, ex.getErrorCode().getHttpStatus());
+    }
 
     /**
      * Obradjuje greske narusavanja ogranicenja baze podataka (npr. duplikat unique kolone).
@@ -38,22 +54,6 @@ public class GlobalExceptionHandler {
                 "Jedan od podataka je već u upotrebi."
         );
         return new ResponseEntity<>(error, HttpStatus.CONFLICT);
-    }
-
-    /**
-     * Obradjuje greske kada trazeni resurs ne postoji.
-     *
-     * @param ex izuzetak nastao pri pristupanju nepostojecem elementu
-     * @return HTTP 404 Not Found odgovor
-     */
-    @ExceptionHandler(NoSuchElementException.class)
-    public ResponseEntity<ErrorResponseDto> handleNoSuchElement(NoSuchElementException ex) {
-        ErrorResponseDto error = new ErrorResponseDto(
-                "ERR_NOT_FOUND",
-                "Resurs nije pronađen",
-                ex.getMessage()
-        );
-        return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
     }
 
     /**

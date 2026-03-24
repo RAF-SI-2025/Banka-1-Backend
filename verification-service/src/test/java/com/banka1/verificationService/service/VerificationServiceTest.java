@@ -5,6 +5,8 @@ import com.banka1.verificationService.dto.request.GenerateRequest;
 import com.banka1.verificationService.dto.request.ValidateRequest;
 import com.banka1.verificationService.dto.response.GenerateResponse;
 import com.banka1.verificationService.dto.response.ValidateResponse;
+import com.banka1.verificationService.exception.BusinessException;
+import com.banka1.verificationService.exception.ErrorCode;
 import com.banka1.verificationService.model.entity.VerificationSession;
 import com.banka1.verificationService.model.enums.OperationType;
 import com.banka1.verificationService.model.enums.VerificationStatus;
@@ -22,7 +24,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -165,8 +166,9 @@ class VerificationServiceTest {
         request.setCode("123456");
 
         assertThatThrownBy(() -> verificationService.validate(request))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("Verification code has expired");
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Verifikacioni kod je istekao: Session ID: 13")
+                .extracting("errorCode").isEqualTo(ErrorCode.VERIFICATION_CODE_EXPIRED);
 
         assertThat(session.getStatus()).isEqualTo(VerificationStatus.EXPIRED);
         verify(repository).save(session);
@@ -184,8 +186,9 @@ class VerificationServiceTest {
         request.setCode("123456");
 
         assertThatThrownBy(() -> verificationService.validate(request))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("Verification session is cancelled");
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Sesija verifikacije je otkazana: Session ID: 14")
+                .extracting("errorCode").isEqualTo(ErrorCode.VERIFICATION_SESSION_CANCELLED);
     }
 
     @Test
@@ -206,8 +209,9 @@ class VerificationServiceTest {
         when(repository.findById(77L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> verificationService.getStatus(77L))
-                .isInstanceOf(NoSuchElementException.class)
-                .hasMessage("Verification session not found");
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Sesija verifikacije nije pronađena: Session ID: 77")
+                .extracting("errorCode").isEqualTo(ErrorCode.VERIFICATION_SESSION_NOT_FOUND);
     }
 
     private VerificationSession pendingSession() {

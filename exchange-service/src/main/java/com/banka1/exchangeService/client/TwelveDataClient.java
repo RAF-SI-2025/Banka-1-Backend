@@ -46,8 +46,8 @@ public class TwelveDataClient {
                     .uri(uriBuilder -> uriBuilder
                             .path("/exchange_rate")
                             .queryParam("symbol", fromCurrency + "/" + toCurrency)
+                            .queryParam("apikey", exchangeRateProperties.twelveDataApiKey())
                             .build())
-                    .header("apikey", exchangeRateProperties.twelveDataApiKey())
                     .retrieve()
                     .body(Map.class);
 

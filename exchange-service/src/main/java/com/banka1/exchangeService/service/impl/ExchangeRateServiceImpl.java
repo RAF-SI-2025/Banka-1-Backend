@@ -307,6 +307,7 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
         LocalDate targetDate = LocalDate.now(clock);
         LocalDate latestSnapshotDate = exchangeRateRepository.findLatestDate();
         if (latestSnapshotDate == null) {
+            log.error("Exchange-rate fetch failed and no local snapshot exists for fallback. Root cause: {}", rootCause.getMessage());
             throw new BusinessException(
                     ErrorCode.EXCHANGE_RATE_FETCH_FAILED,
                     "Exchange-rate fetch failed and no local snapshot exists for fallback."

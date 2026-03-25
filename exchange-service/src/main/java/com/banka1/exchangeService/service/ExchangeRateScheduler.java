@@ -1,6 +1,7 @@
 package com.banka1.exchangeService.service;
 
 import com.banka1.exchangeService.config.ExchangeRateProperties;
+import com.banka1.exchangeService.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -37,6 +38,10 @@ public class ExchangeRateScheduler {
             return;
         }
         log.info("Fetching exchange rates on startup.");
-        exchangeRateService.fetchAndStoreDailyRates();
+        try {
+            exchangeRateService.fetchAndStoreDailyRates();
+        } catch (BusinessException ex) {
+            log.error("Startup exchange-rate fetch failed — service will start without rates. Cause: {}", ex.getMessage());
+        }
     }
 }

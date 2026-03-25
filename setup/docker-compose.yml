@@ -344,8 +344,8 @@ services:
         condition: service_healthy
       otel-collector:
         condition: service_started
-    expose:
-      - "${ACCOUNT_SERVER_PORT:-8084}"
+    ports:
+      - "${ACCOUNT_SERVER_PORT:-8084}:${ACCOUNT_SERVER_PORT:-8084}"
     networks:
       - banka-network
     healthcheck:

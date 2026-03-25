@@ -15,7 +15,8 @@ public enum ErrorCode {
 
     INSUFFICIENT_FUNDS(HttpStatus.UNPROCESSABLE_CONTENT,"ERR_ACCOUNT_001","Nema dovoljno novca na racunu"),
     DAILY_LIMIT_EXCEEDED(HttpStatus.UNPROCESSABLE_CONTENT,"ERR_ACOCUNT_002","Predjen dnevni limit"),
-    MONTHLY_LIMIT_EXCEEDED(HttpStatus.UNPROCESSABLE_CONTENT,"ERR_ACOCUNT_003","Predjen mesecni limit");
+    MONTHLY_LIMIT_EXCEEDED(HttpStatus.UNPROCESSABLE_CONTENT,"ERR_ACOCUNT_003","Predjen mesecni limit"),
+    VERIFICATION_FAILED(HttpStatus.FORBIDDEN,"ERR_ACCOUNT_004","Neuspesna verifikacija");
 
     /** HTTP status koji se vraca klijentu kada se baci ova greska. */
     private final HttpStatus httpStatus;

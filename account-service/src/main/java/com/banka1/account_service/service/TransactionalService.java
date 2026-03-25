@@ -8,5 +8,5 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import java.math.BigDecimal;
 
 public interface TransactionalService {
-    UpdatedBalanceResponseDto transfer(Account from, Account to,Account bank,PaymentDto paymentDto);
+    UpdatedBalanceResponseDto transfer(Account from, Account to,Account bankSender,Account bankTarget,PaymentDto paymentDto);
 }

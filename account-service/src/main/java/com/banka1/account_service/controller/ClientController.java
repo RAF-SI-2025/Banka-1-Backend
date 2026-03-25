@@ -101,8 +101,15 @@ public class ClientController {
         @ApiResponse(responseCode = "404", description = "Account not found",
             content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
     })
+
+    @PutMapping("/api/accounts/{accountNumber}/name")
+    public ResponseEntity<String> editAccountName(@AuthenticationPrincipal Jwt jwt,@PathVariable String accountNumber,@RequestBody @Valid EditAccountNameDto editAccountNameDto)
+    {
+        return new ResponseEntity<>(clientService.editAccountName(jwt,accountNumber,editAccountNameDto), HttpStatus.OK);
+    }
+
     @PatchMapping("/accounts/{id}/name")
-    public ResponseEntity<String> editAccountName(@AuthenticationPrincipal Jwt jwt,@PathVariable Long id,@RequestBody @Valid EditAccountNameDto editAccountNameDto)
+    public ResponseEntity<String> editAccountNameId(@AuthenticationPrincipal Jwt jwt,@PathVariable Long id,@RequestBody @Valid EditAccountNameDto editAccountNameDto)
     {
         return new ResponseEntity<>(clientService.editAccountName(jwt,id,editAccountNameDto), HttpStatus.OK);
     }
@@ -121,9 +128,20 @@ public class ClientController {
             content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
     })
     @PatchMapping("/accounts/{id}/limit")
-    public ResponseEntity<String> editAccountLimit(@AuthenticationPrincipal Jwt jwt,@PathVariable Long id,@RequestBody @Valid EditAccountLimitDto editAccountLimitDto)
+    public ResponseEntity<String> editAccountLimitId(@AuthenticationPrincipal Jwt jwt,@PathVariable Long id,@RequestBody @Valid EditAccountLimitDto editAccountLimitDto)
     {
         return new ResponseEntity<>(clientService.editAccountLimit(jwt,id,editAccountLimitDto), HttpStatus.OK);
+    }
+    @PutMapping("/api/accounts/{accountNumber}/limit")
+    public ResponseEntity<String> editAccountLimit(@AuthenticationPrincipal Jwt jwt,@PathVariable String accountNumber,@RequestBody @Valid EditAccountLimitDto editAccountLimitDto)
+    {
+        return new ResponseEntity<>(clientService.editAccountLimit(jwt,accountNumber,editAccountLimitDto), HttpStatus.OK);
+    }
+
+    @PutMapping("/api/accounts/{accountNumber}/status")
+    public ResponseEntity<String> editStatus(@AuthenticationPrincipal Jwt jwt,@PathVariable String accountNumber,@RequestBody @Valid EditStatus editStatus)
+    {
+        return new ResponseEntity<>(clientService.editStatus(jwt,accountNumber,editStatus), HttpStatus.OK);
     }
 
     @Operation(summary = "Get account details")
@@ -136,9 +154,15 @@ public class ClientController {
             content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
     })
     @GetMapping("/accounts/{id}")
-    public ResponseEntity<AccountDetailsResponseDto> getDetails (@AuthenticationPrincipal Jwt jwt,@PathVariable Long id)
+    public ResponseEntity<AccountDetailsResponseDto> getDetailsId (@AuthenticationPrincipal Jwt jwt,@PathVariable Long id)
     {
         return new ResponseEntity<>(clientService.getDetails(jwt,id), HttpStatus.OK);
+    }
+
+    @GetMapping("/api/accounts/{accountNumber}")
+    public ResponseEntity<AccountDetailsResponseDto> getDetails (@AuthenticationPrincipal Jwt jwt,@PathVariable String accountNumber)
+    {
+        return new ResponseEntity<>(clientService.getDetails(jwt,accountNumber), HttpStatus.OK);
     }
 
 //    @Operation(summary = "Get account cards")

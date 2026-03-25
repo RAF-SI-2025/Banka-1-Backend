@@ -25,7 +25,8 @@ public class RabbitClient {
      *
      * @param dto payload poruke koja se prosledjuje email servisu
      */
-//    public void sendEmailNotification(EmailDto dto) {
-//        rabbitTemplate.convertAndSend(exchange, dto.getEmailType().getRoutingKey(), dto);
-//    }
+    //TODO FIX
+    public void sendEmailNotification(EmailDto dto) {
+        rabbitTemplate.convertAndSend(exchange, dto.getEmailType().getRoutingKey(), dto);
+    }
 }

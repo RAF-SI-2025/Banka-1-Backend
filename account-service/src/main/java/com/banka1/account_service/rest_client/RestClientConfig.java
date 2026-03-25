@@ -14,7 +14,7 @@ public class RestClientConfig {
     }
 
     @Bean
-    public RestClient clientServiceClient(
+    public RestClient restClient(
             RestClient.Builder builder,
             @Value("${services.user.url}") String baseUrl,
             JWTService jwtService

@@ -12,12 +12,16 @@ import com.banka1.account_service.dto.request.UpdateCardDto;
 import com.banka1.account_service.dto.response.AccountSearchResponseDto;
 import com.banka1.account_service.dto.response.ClientInfoResponseDto;
 import com.banka1.account_service.dto.response.ClientResponseDto;
+import com.banka1.account_service.rabbitMQ.EmailDto;
+import com.banka1.account_service.rabbitMQ.EmailType;
+import com.banka1.account_service.rabbitMQ.RabbitClient;
 import com.banka1.account_service.repository.AccountRepository;
 import com.banka1.account_service.repository.CompanyRepository;
 import com.banka1.account_service.repository.CurrencyRepository;
 import com.banka1.account_service.repository.SifraDelatnostiRepository;
 import com.banka1.account_service.rest_client.ClientService;
 import com.banka1.account_service.service.EmployeeService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -25,12 +29,16 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
 
+//@RequiredArgsConstructor
 @Service
 public class EmployeeServiceImplementation implements EmployeeService {
     private final Random random;
@@ -41,10 +49,12 @@ public class EmployeeServiceImplementation implements EmployeeService {
     private final CurrencyRepository currencyRepository;
     private final SifraDelatnostiRepository sifraDelatnostiRepository;
     private final CompanyRepository companyRepository;
+    private final RabbitClient rabbitClient;
 
-    public EmployeeServiceImplementation(@Value("${my.random.seed}") Long seed, ClientService clientService, CurrencyRepository currencyRepository, SifraDelatnostiRepository sifraDelatnostiRepository, CompanyRepository companyRepository, AccountRepository accountRepository)
+    public EmployeeServiceImplementation(@Value("${my.random.seed}") Long seed, ClientService clientService, CurrencyRepository currencyRepository, SifraDelatnostiRepository sifraDelatnostiRepository, CompanyRepository companyRepository, AccountRepository accountRepository, RabbitClient rabbitClient)
     {
         this.clientService = clientService;
+        this.rabbitClient = rabbitClient;
         this.random=new Random();
         this.currencyRepository=currencyRepository;
         this.sifraDelatnostiRepository=sifraDelatnostiRepository;
@@ -101,9 +111,16 @@ public class EmployeeServiceImplementation implements EmployeeService {
         return companyRepository.save(company);
     }
 
+    //todo menjati gresku
     private ClientInfoResponseDto resolveClientId(Long id, String jmbg) {
-        if (id != null) return clientService.getUser(id);
-        return clientService.getUser(jmbg);
+        ClientInfoResponseDto clientInfoResponseDto;
+        if (id != null)
+            clientInfoResponseDto= clientService.getUser(id);
+        else
+            clientInfoResponseDto=clientService.getUser(jmbg);
+        if(clientInfoResponseDto==null)
+            throw new RuntimeException("Greska sa komunikacijom izmedju servisa");
+        return clientInfoResponseDto;
     }
 
 
@@ -144,7 +161,8 @@ public class EmployeeServiceImplementation implements EmployeeService {
                                  String surname,
                                  Jwt jwt,
                                  Currency currency,
-                                 Company company) {
+                                 Company company,
+                                 BigDecimal balance) {
 
         account.setBrojRacuna(broj);
         account.setImeVlasnikaRacuna(name);
@@ -155,6 +173,8 @@ public class EmployeeServiceImplementation implements EmployeeService {
         account.setDatumIVremeKreiranja(LocalDateTime.now());
         account.setCurrency(currency);
         account.setCompany(company);
+        account.setStanje(balance);
+        account.setRaspolozivoStanje(balance);
     }
 
     //todo rabit mq
@@ -167,8 +187,15 @@ public class EmployeeServiceImplementation implements EmployeeService {
         ClientInfoResponseDto clientInfoResponseDto = resolveClientId(fxDto.getIdVlasnika(), fxDto.getJmbg());
         String broj = generateAccountNumber(String.valueOf(fxDto.getTipRacuna().getVal()));
         Account account = new FxAccount(fxDto.getTipRacuna());
-        populateAccount(account, broj, fxDto.getNazivRacuna(), clientInfoResponseDto.getId(), clientInfoResponseDto.getName(),clientInfoResponseDto.getLastName(),jwt, currency, company);
+        populateAccount(account, broj, fxDto.getNazivRacuna(), clientInfoResponseDto.getId(), clientInfoResponseDto.getName(),clientInfoResponseDto.getLastName(),jwt, currency, company,fxDto.getInitialBalance());
         accountRepository.save(account);
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                //todo gresku ostavljam namerno da me upozori da se vratim na ovo, mora i da se posalje AccountCreated event za card create
+                rabbitClient.sendEmailNotification(new EmailDto(clientInfoResponseDto.getUsername(),clientInfoResponseDto.getEmail(), EmailType.ACCOUNT_CREATED));
+            }
+        });
         return "Uspesno kreiran fx account";
     }
 
@@ -182,15 +209,30 @@ public class EmployeeServiceImplementation implements EmployeeService {
         ClientInfoResponseDto clientInfoResponseDto = resolveClientId(checkingDto.getIdVlasnika(), checkingDto.getJmbg());
         String broj = generateAccountNumber(String.valueOf(checkingDto.getVrstaRacuna().getVal()));
         Account account = new CheckingAccount(checkingDto.getVrstaRacuna());
-        populateAccount(account, broj, checkingDto.getNazivRacuna(), clientInfoResponseDto.getId(), clientInfoResponseDto.getName(),clientInfoResponseDto.getLastName(),jwt, currency, company);
+        populateAccount(account, broj, checkingDto.getNazivRacuna(), clientInfoResponseDto.getId(), clientInfoResponseDto.getName(),clientInfoResponseDto.getLastName(),jwt, currency, company,checkingDto.getInitialBalance());
         accountRepository.save(account);
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                //todo gresku ostavljam namerno da me upozori da se vratim na ovo, mora i da se posalje AccountCreated event za card create
+                rabbitClient.sendEmailNotification(new EmailDto(clientInfoResponseDto.getUsername(),clientInfoResponseDto.getEmail(), EmailType.ACCOUNT_CREATED));
+
+            }
+        });
         return "Uspesno kreiran checking account";
+    }
+
+    private String myTrim(String s)
+    {
+        if(s!=null)
+            return s.trim();
+        return s;
     }
 
     @Transactional
     public Page<AccountSearchResponseDto> searchAllAccounts(Jwt jwt,String ime,String prezime,String accountNumber,int page,int size)
     {
-        return accountRepository.searchAccounts(accountNumber.trim(),ime.trim(),prezime.trim(),PageRequest.of(page,size)).map(AccountSearchResponseDto::new);
+        return accountRepository.searchAccounts(myTrim(accountNumber),myTrim(ime),myTrim(prezime),PageRequest.of(page,size)).map(AccountSearchResponseDto::new);
     }
 
     //todo rabit mq

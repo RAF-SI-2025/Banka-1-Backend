@@ -17,10 +17,10 @@ import java.math.BigDecimal;
 @Setter
 public class PaymentDto {
     @NotBlank(message = "Unesi racun posiljaoca")
-    @Pattern(regexp = "\\d{18}", message = "Broj racuna mora imati 18 cifara")
+    @Pattern(regexp = "^\\d{18}$", message = "Broj racuna mora imati 18 cifara")
     private String fromAccountNumber;
     @NotBlank(message = "Unesi racun primaoca")
-    @Pattern(regexp = "\\d{18}", message = "Broj racuna mora imati 18 cifara")
+    @Pattern(regexp = "^\\d{18}$", message = "Broj racuna mora imati 18 cifara")
     private String toAccountNumber;
     @NotNull(message = "Unesi iznos pre konverzije")
     private BigDecimal fromAmount;

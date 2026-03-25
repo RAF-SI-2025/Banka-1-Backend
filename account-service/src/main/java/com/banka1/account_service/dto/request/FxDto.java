@@ -9,6 +9,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -24,6 +26,10 @@ public class FxDto {
     private CurrencyCode currencyCode;
     @NotNull(message = "Unesi tip racuna")
     private AccountOwnershipType tipRacuna;
+    @NotNull(message = "Unesi initialBalance")
+    private BigDecimal initialBalance;
+    @NotNull(message = "Unesi createCard")
+    private Boolean createCard;
     private FirmaDto firma;
 
 }

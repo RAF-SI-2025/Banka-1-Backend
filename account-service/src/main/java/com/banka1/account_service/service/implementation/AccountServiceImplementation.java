@@ -49,17 +49,12 @@ public class AccountServiceImplementation implements AccountService {
 
 
     //todo potencijalno migrirati na Springov Retry, za sad ne treba ali moze biti lepse
-
-    @Override
-    public UpdatedBalanceResponseDto transaction(PaymentDto paymentDto) {
-        Account from=validate(paymentDto.getFromAccountNumber());
-        Account to=validate(paymentDto.getToAccountNumber());
-        Account bank=validateBank(to);
-        if(from.getVlasnik().equals(to.getVlasnik()))
-            throw new IllegalArgumentException("Tranzakcija se ne moze odvijati za racune istog vlasnike");
+    private UpdatedBalanceResponseDto execute(PaymentDto paymentDto, Account from, Account to, Account bankSender, Account bankTarget) {
+        if(!from.getVlasnik().equals(paymentDto.getClientId()))
+            throw new IllegalArgumentException("Nisi vlasnik racuna");
         for(int i = 0; true; i++) {
             try {
-                return transactionalService.transfer(from,to,bank,paymentDto);
+                return transactionalService.transfer(from,to,bankSender,bankTarget,paymentDto);
             } catch (ObjectOptimisticLockingFailureException | OptimisticLockException optimisticLockException) {
                 if(i>=2)
                     throw optimisticLockException;
@@ -68,23 +63,28 @@ public class AccountServiceImplementation implements AccountService {
     }
 
     @Override
+    public UpdatedBalanceResponseDto transaction(PaymentDto paymentDto) {
+        Account from=validate(paymentDto.getFromAccountNumber());
+        Account to=validate(paymentDto.getToAccountNumber());
+        Account bankSender=validateBank(from);
+        Account bankTarget=validateBank(to);
+        if(from.getVlasnik().equals(to.getVlasnik()))
+            throw new IllegalArgumentException("Tranzakcija se ne moze odvijati za racune istog vlasnike");
+        return execute(paymentDto, from, to, bankSender, bankTarget);
+    }
+
+
+
+    @Override
     public UpdatedBalanceResponseDto transfer(PaymentDto paymentDto) {
         Account from=validate(paymentDto.getFromAccountNumber());
         Account to=validate(paymentDto.getToAccountNumber());
-        Account bank=validateBank(to);
+        Account bankSender=validateBank(from);
+        Account bankTarget=validateBank(to);
         if(paymentDto.getClientId()==null)
             throw new IllegalArgumentException("Unesi id clienta");
         if(!from.getVlasnik().equals(to.getVlasnik()))
             throw new IllegalArgumentException("Transfer se moze odvijati samo za racune istog vlasnika");
-        if(!from.getVlasnik().equals(paymentDto.getClientId()))
-            throw new IllegalArgumentException("Nisi vlasnik racuna");
-        for(int i = 0; true; i++) {
-            try {
-                return transactionalService.transfer(from,to,bank,paymentDto);
-            } catch (ObjectOptimisticLockingFailureException | OptimisticLockException optimisticLockException) {
-                if(i>=2)
-                    throw optimisticLockException;
-            }
-        }
+        return execute(paymentDto, from, to, bankSender, bankTarget);
     }
 }

@@ -13,16 +13,16 @@ import org.springframework.web.util.UriComponentsBuilder;
 @RequiredArgsConstructor
 public class ClientService {
 
-    private final RestClient clientServiceClient;
+    private final RestClient restClient;
 
     public ClientInfoResponseDto getUser(String jmbg) {
-        return clientServiceClient.get()
+        return restClient.get()
                 .uri("/customers/jmbg/{jmbg}", jmbg)
                 .retrieve()
                 .body(ClientInfoResponseDto.class);
     }
     public ClientInfoResponseDto getUser(Long id) {
-        return clientServiceClient.get()
+        return restClient.get()
                 .uri("/customers/{id}", id)
                 .retrieve()
                 .body(ClientInfoResponseDto.class);

@@ -8,6 +8,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
+
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
@@ -24,4 +26,8 @@ public class CheckingDto {
     @NotNull(message = "Unesi podvrstu racuna")
     private AccountConcrete vrstaRacuna;
     private FirmaDto firma;
+    @NotNull(message = "Unesi initialBalance")
+    private BigDecimal initialBalance;
+    @NotNull(message = "Unesi createCard")
+    private Boolean createCard;
 }

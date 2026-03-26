@@ -48,6 +48,8 @@ public class TransactionServiceImplementation implements TransactionService {
     private final ClientService clientService;
     @Value("${banka.security.id}")
     private String appPropertiesId;
+    @Value("banka.security.roles-claim")
+    private String roles;
     private final TransactionServiceInternal transactionServiceInternal;
     private final PaymentRepository paymentRepository;
 
@@ -102,11 +104,14 @@ public class TransactionServiceImplementation implements TransactionService {
 
     @Override
     public Page<TransactionResponseDto> findPayments(Jwt jwt, String accountNumber, TransactionStatus transactionStatus, LocalDateTime fromDate, LocalDateTime toDate, BigDecimal initialAmountMin, BigDecimal initialAmountMax, BigDecimal finalAmountMin, BigDecimal finalAmountMax, int page, int size) {
+        if(!jwt.getClaimAsString(roles).equalsIgnoreCase("ADMIN"))
+        {
         AccountDetailsResponseDto accountDetailsResponseDto=accountService.getDetails(accountNumber);
         if(accountDetailsResponseDto == null)
             throw new IllegalStateException("Sistemska greska");
         if(accountDetailsResponseDto.getVlasnik()==null || !accountDetailsResponseDto.getVlasnik().equals(((Number) jwt.getClaim(appPropertiesId)).longValue()))
             throw new IllegalArgumentException("Nisi vlasnik racuna");
+        }
         return paymentRepository.searchPayments(accountNumber,transactionStatus,fromDate,toDate,initialAmountMin,initialAmountMax,finalAmountMin,finalAmountMax, PageRequest.of(page,size)).map(TransactionResponseDto::new);
     }
 

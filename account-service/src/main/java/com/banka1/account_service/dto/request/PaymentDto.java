@@ -38,14 +38,14 @@ public class PaymentDto {
      * Broj računa sa kojeg se novac prenosi (19 cifara).
      */
     @NotBlank(message = "Unesi racun posiljaoca")
-    @Pattern(regexp = "^\\d{19}$", message = "Broj racuna mora imati 19 cifara")
+    @Pattern(regexp = "^\\d{18}$", message = "Broj racuna mora imati 18 cifara")
     private String fromAccountNumber;
 
     /**
-     * Broj računa na koji se novac prenosi (19 cifara).
+     * Broj računa na koji se novac prenosi (18 cifara).
      */
     @NotBlank(message = "Unesi racun primaoca")
-    @Pattern(regexp = "^\\d{19}$", message = "Broj racuna mora imati 19 cifara")
+    @Pattern(regexp = "^\\d{18}$", message = "Broj racuna mora imati 18 cifara")
     private String toAccountNumber;
 
     /**

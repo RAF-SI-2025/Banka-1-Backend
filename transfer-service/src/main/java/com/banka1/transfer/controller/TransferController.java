@@ -40,9 +40,7 @@ public class TransferController {
             @AuthenticationPrincipal Jwt jwt,
             @RequestBody @Valid TransferRequestDto request
     ) {
-
-        // jwt.getClaimAsString("id") možemo proslediti servisu ako želimo da validiramo da je broj racuna zapravo od ulogovanog korisnika
-        TransferResponseDto response = transferService.executeTransfer(request);
+        TransferResponseDto response = transferService.executeTransfer(jwt, request);
         return ResponseEntity.ok(response);
     }
 
@@ -90,7 +88,7 @@ public class TransferController {
             @PathVariable String orderNumber
     ) {
 
-        TransferResponseDto response = transferService.getTransferDetails(orderNumber);
+        TransferResponseDto response = transferService.getTransferDetails(jwt, orderNumber);
         // NOTE: Ovde bi takođe trebala autorizacija da klijent A ne može po orderNumberu
         // da otvori transfer klijenta B. To ćemo rešiti validacijom u servisu.
         return ResponseEntity.ok(response);
@@ -112,15 +110,8 @@ public class TransferController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        /*
-         * NOTE: Autorizacija.
-         * Idealno bi ovde (ili u servisu) trebalo pozvati accountClient.getAccountDetails(accountNumber)
-         * i proveriti da li je ownerId jednak ulogovanom korisniku (ili je korisnik zaposleni),
-         * kako klijent A ne bi mogao da lista transfere klijenta B.
-         */
-
         Pageable pageable = PageRequest.of(page, size, Sort.by("timestamp").descending());
-        Page<TransferResponseDto> response = transferService.getTransfersByAccountNumber(accountNumber, pageable);
+        Page<TransferResponseDto> response = transferService.getTransfersByAccountNumber(jwt, accountNumber, pageable);
 
         return ResponseEntity.ok(response);
     }

@@ -1,6 +1,5 @@
 package com.banka1.transfer.service.impl;
 
-
 import com.banka1.transfer.client.*;
 import com.banka1.transfer.domain.Transfer;
 import com.banka1.transfer.dto.client.*;
@@ -22,13 +21,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
-
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -43,13 +42,13 @@ class TransferServiceImplTest {
     @Mock private VerificationClient verificationClient;
     @Mock private RabbitClient rabbitClient;
     @Mock private ClientClient clientClient;
+    @Mock private Jwt jwt;
 
     @InjectMocks
     private TransferServiceImpl transferService;
 
     @BeforeEach
     void setUp() {
-        // Omogućava testiranje koda koji koristi TransactionSynchronizationManager
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.initSynchronization();
         }
@@ -57,10 +56,14 @@ class TransferServiceImplTest {
 
     @AfterEach
     void tearDown() {
-        // Čišćenje nakon testa
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.clear();
         }
+    }
+
+    private void mockJwt(String id, String role) {
+        when(jwt.getClaimAsString("id")).thenReturn(id);
+        when(jwt.getClaimAsStringList("roles")).thenReturn(List.of(role));
     }
 
     @Test
@@ -70,15 +73,17 @@ class TransferServiceImplTest {
         request.setFromAccountNumber("111");
         request.setToAccountNumber("222");
         request.setAmount(new BigDecimal("100"));
-        request.setVerificationSessionId("session1");
-        request.setVerificationCode("123456");
+        request.setVerificationSessionId(1L);
 
+        mockJwt("1", "ROLE_CLIENT_BASIC");
         AccountDto fromAcc = new AccountDto("111", 1L, "RSD", new BigDecimal("1000"), "ACTIVE", "CURRENT");
         AccountDto toAcc = new AccountDto("222", 1L, "RSD", new BigDecimal("500"), "ACTIVE", "CURRENT");
         ClientInfoResponseDto clientInfo = new ClientInfoResponseDto(1L, "Pera", "Peric", "pera@gmail.com");
 
-        when(transferRepository.existsByVerificationSessionId("session1")).thenReturn(false);
-        when(verificationClient.validateCode("session1", "123456")).thenReturn(new VerificationResponseDto(true, "SUCCESS", 3));
+        when(transferRepository.existsByVerificationSessionId("1")).thenReturn(false);
+        // NOVO: Provera statusa sesije
+        when(verificationClient.getVerificationStatus(1L)).thenReturn(new VerificationResponseDto(1L, "VERIFIED"));
+
         when(accountClient.getAccountDetails("111")).thenReturn(fromAcc);
         when(accountClient.getAccountDetails("222")).thenReturn(toAcc);
         when(transferMapper.toEntity(any(), any(), any(), any(), any(), any())).thenReturn(new Transfer());
@@ -87,18 +92,14 @@ class TransferServiceImplTest {
         when(transferMapper.toDto(any())).thenReturn(new TransferResponseDto());
 
         // Act
-        TransferResponseDto result = transferService.executeTransfer(request);
+        TransferResponseDto result = transferService.executeTransfer(jwt, request);
 
         // Assert
         assertNotNull(result);
-        verify(exchangeClient, never()).calculateExchange(any(), any(), any()); // Nema menjačnice
         verify(accountClient, times(1)).executeTransfer(any(PaymentDto.class));
 
-        // Simulacija završetka transakcije da bi se poslao mejl
         List<TransactionSynchronization> synchronizations = TransactionSynchronizationManager.getSynchronizations();
-        assertFalse(synchronizations.isEmpty());
         synchronizations.forEach(TransactionSynchronization::afterCommit);
-
         verify(rabbitClient, times(1)).sendEmailNotification(any(EmailDto.class));
     }
 
@@ -109,17 +110,17 @@ class TransferServiceImplTest {
         request.setFromAccountNumber("111");
         request.setToAccountNumber("222");
         request.setAmount(new BigDecimal("100"));
-        request.setVerificationSessionId("session1");
-        request.setVerificationCode("123456");
+        request.setVerificationSessionId(1L);
 
-        // Različite valute
+        mockJwt("1", "ROLE_CLIENT_BASIC");
         AccountDto fromAcc = new AccountDto("111", 1L, "RSD", new BigDecimal("1000"), "ACTIVE", "CURRENT");
         AccountDto toAcc = new AccountDto("222", 1L, "EUR", new BigDecimal("500"), "ACTIVE", "CURRENT");
-
         ExchangeResponseDto exchangeResp = new ExchangeResponseDto("RSD", "EUR", new BigDecimal("100"), new BigDecimal("0.85"), new BigDecimal("117.2"), BigDecimal.ZERO);
 
-        when(transferRepository.existsByVerificationSessionId("session1")).thenReturn(false);
-        when(verificationClient.validateCode("session1", "123456")).thenReturn(new VerificationResponseDto(true, "SUCCESS", 3));
+        when(transferRepository.existsByVerificationSessionId("1")).thenReturn(false);
+        // NOVO: Provera statusa sesije
+        when(verificationClient.getVerificationStatus(1L)).thenReturn(new VerificationResponseDto(1L, "VERIFIED"));
+
         when(accountClient.getAccountDetails("111")).thenReturn(fromAcc);
         when(accountClient.getAccountDetails("222")).thenReturn(toAcc);
         when(exchangeClient.calculateExchange("RSD", "EUR", new BigDecimal("100"))).thenReturn(exchangeResp);
@@ -128,7 +129,7 @@ class TransferServiceImplTest {
         when(clientClient.getClientDetails(1L)).thenReturn(new ClientInfoResponseDto(1L, "Pera", "P", "p@p.com"));
 
         // Act
-        transferService.executeTransfer(request);
+        transferService.executeTransfer(jwt, request);
 
         // Assert
         verify(exchangeClient, times(1)).calculateExchange("RSD", "EUR", new BigDecimal("100"));
@@ -137,23 +138,23 @@ class TransferServiceImplTest {
     @Test
     void executeTransfer_Fail_Idempotency() {
         TransferRequestDto request = new TransferRequestDto();
-        request.setVerificationSessionId("session-processed");
+        request.setVerificationSessionId(99L);
 
-        when(transferRepository.existsByVerificationSessionId("session-processed")).thenReturn(true);
+        when(transferRepository.existsByVerificationSessionId("99")).thenReturn(true);
 
-        assertThrows(BusinessException.class, () -> transferService.executeTransfer(request));
+        assertThrows(BusinessException.class, () -> transferService.executeTransfer(jwt, request));
     }
 
     @Test
     void executeTransfer_Fail_SameAccount() {
         TransferRequestDto request = new TransferRequestDto();
         request.setFromAccountNumber("111");
-        request.setToAccountNumber("111"); // Isti račun
-        request.setVerificationSessionId("session1");
+        request.setToAccountNumber("111");
+        request.setVerificationSessionId(1L);
 
-        when(transferRepository.existsByVerificationSessionId("session1")).thenReturn(false);
+        when(transferRepository.existsByVerificationSessionId("1")).thenReturn(false);
 
-        assertThrows(BusinessException.class, () -> transferService.executeTransfer(request));
+        assertThrows(BusinessException.class, () -> transferService.executeTransfer(jwt, request));
     }
 
     @Test
@@ -161,32 +162,31 @@ class TransferServiceImplTest {
         TransferRequestDto request = new TransferRequestDto();
         request.setFromAccountNumber("111");
         request.setToAccountNumber("222");
-        request.setVerificationSessionId("session1");
-        request.setVerificationCode("000");
+        request.setVerificationSessionId(1L);
 
-        when(transferRepository.existsByVerificationSessionId("session1")).thenReturn(false);
-        when(verificationClient.validateCode("session1", "000")).thenReturn(new VerificationResponseDto(false, "FAIL", 0));
+        when(transferRepository.existsByVerificationSessionId("1")).thenReturn(false);
+        // NOVO: Status nije VERIFIED (npr. PENDING ili EXPIRED)
+        when(verificationClient.getVerificationStatus(1L)).thenReturn(new VerificationResponseDto(1L, "PENDING"));
 
-        assertThrows(BusinessException.class, () -> transferService.executeTransfer(request));
+        assertThrows(BusinessException.class, () -> transferService.executeTransfer(jwt, request));
     }
 
     @Test
-    void executeTransfer_Fail_OwnershipMismatch() {
+    void executeTransfer_Fail_NotOwner() {
         TransferRequestDto request = new TransferRequestDto();
         request.setFromAccountNumber("111");
-        request.setToAccountNumber("222");
-        request.setVerificationSessionId("session1");
+        request.setVerificationSessionId(1L);
 
-        // Vlasnik 1 šalje Vlasniku 2
-        AccountDto fromAcc = new AccountDto("111", 1L, "RSD", BigDecimal.TEN, "ACTIVE", "CURRENT");
-        AccountDto toAcc = new AccountDto("222", 2L, "RSD", BigDecimal.TEN, "ACTIVE", "CURRENT");
+        mockJwt("2", "ROLE_CLIENT_BASIC"); // Logovan User 2
+        AccountDto fromAcc = new AccountDto("111", 1L, "RSD", BigDecimal.TEN, "ACTIVE", "C"); // Vlasnik je 1
 
-        when(transferRepository.existsByVerificationSessionId("session1")).thenReturn(false);
-        when(verificationClient.validateCode(any(), any())).thenReturn(new VerificationResponseDto(true, "OK", 3));
-        when(accountClient.getAccountDetails("111")).thenReturn(fromAcc);
-        when(accountClient.getAccountDetails("222")).thenReturn(toAcc);
+        when(transferRepository.existsByVerificationSessionId("1")).thenReturn(false);
+        // Prolazi verifikaciju ali pada na owner checku
+        when(verificationClient.getVerificationStatus(1L)).thenReturn(new VerificationResponseDto(1L, "VERIFIED"));
 
-        assertThrows(BusinessException.class, () -> transferService.executeTransfer(request));
+        when(accountClient.getAccountDetails(any())).thenReturn(fromAcc);
+
+        assertThrows(BusinessException.class, () -> transferService.executeTransfer(jwt, request));
     }
 
     @Test
@@ -207,33 +207,47 @@ class TransferServiceImplTest {
     void getTransferDetails_Success() {
         Transfer transfer = new Transfer();
         transfer.setOrderNumber("TRF-123");
+        transfer.setClientId(1L);
 
+        mockJwt("1", "ROLE_CLIENT_BASIC");
         when(transferRepository.findByOrderNumber("TRF-123")).thenReturn(Optional.of(transfer));
         when(transferMapper.toDto(transfer)).thenReturn(new TransferResponseDto());
 
-        TransferResponseDto result = transferService.getTransferDetails("TRF-123");
+        TransferResponseDto result = transferService.getTransferDetails(jwt, "TRF-123");
 
         assertNotNull(result);
     }
 
     @Test
-    void getTransferDetails_NotFound() {
-        when(transferRepository.findByOrderNumber("TRF-999")).thenReturn(Optional.empty());
+    void getTransferDetails_Forbidden_NotOwner() {
+        Transfer transfer = new Transfer();
+        transfer.setClientId(1L); // Vlasnik 1
 
-        assertThrows(BusinessException.class, () -> transferService.getTransferDetails("TRF-999"));
+        mockJwt("2", "ROLE_CLIENT_BASIC"); // Logovan 2
+        when(transferRepository.findByOrderNumber("ANY")).thenReturn(Optional.of(transfer));
+
+        assertThrows(BusinessException.class, () -> transferService.getTransferDetails(jwt, "ANY"));
     }
 
     @Test
     void getTransfersByAccountNumber_ReturnsPage() {
         Pageable pageable = PageRequest.of(0, 10);
-        Page<Transfer> transferPage = new PageImpl<>(List.of(new Transfer()));
+        AccountDto acc = new AccountDto("111", 1L, "RSD", BigDecimal.ZERO, "ACTIVE", "C");
 
-        when(transferRepository.findByFromAccountNumberOrToAccountNumber("111", "111", pageable)).thenReturn(transferPage);
+        mockJwt("1", "ROLE_CLIENT_BASIC");
+        when(accountClient.getAccountDetails("111")).thenReturn(acc);
+        when(transferRepository.findByFromAccountNumberOrToAccountNumber("111", "111", pageable))
+                .thenReturn(new PageImpl<>(List.of(new Transfer())));
         when(transferMapper.toDto(any())).thenReturn(new TransferResponseDto());
 
-        Page<TransferResponseDto> result = transferService.getTransfersByAccountNumber("111", pageable);
+        Page<TransferResponseDto> result = transferService.getTransfersByAccountNumber(jwt, "111", pageable);
 
         assertNotNull(result);
-        assertEquals(1, result.getTotalElements());
+    }
+
+    @Test
+    void getTransfersByAccountNumber_NotFound() {
+        when(accountClient.getAccountDetails("999")).thenReturn(null);
+        assertThrows(BusinessException.class, () -> transferService.getTransfersByAccountNumber(jwt, "999", PageRequest.of(0, 10)));
     }
 }

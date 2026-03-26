@@ -22,10 +22,6 @@ public class TransferRequestDto {
     @DecimalMin(value = "0.01", message = "Amount must be strictly positive") // Iznos transfera (pozitivna vrednost)
     private BigDecimal amount;
 
-    @NotBlank
-    @Pattern(regexp = "^\\d{6}$", message = "verificationCode must be a 6-digit number.")
-    private String verificationCode;  // 2FA kod dobijen putem emaila/SMS-a
-
     @NotNull
     private Long verificationSessionId; // ID sesije vezan za 2FA kod
 }

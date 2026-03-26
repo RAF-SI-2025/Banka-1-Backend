@@ -11,10 +11,9 @@ import org.springframework.stereotype.Component;
 @Profile("local")
 public class MockVerificationClient implements VerificationClient {
     @Override
-    public VerificationResponseDto validateCode(Long sessionId, String code) {
-        log.info("MOCK: Validating code {} for session {}", code, sessionId);
-        // Simuliramo da je svaki kod "123456" ispravan
-        boolean isValid = "123456".equals(code);
-        return new VerificationResponseDto(isValid, isValid ? "VERIFIED" : "PENDING", 2);
+    public VerificationResponseDto getVerificationStatus(Long sessionId) {
+        log.info("MOCK: Fetching verification status for session {}", sessionId);
+        // Uvek vraćamo VERIFIED na lokalu da bi testiranje transfera prolazilo
+        return new VerificationResponseDto(sessionId, "VERIFIED");
     }
 }

@@ -19,8 +19,10 @@ import com.banka1.transfer.repository.TransferRepository;
 import com.banka1.transfer.service.TransferService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -28,6 +30,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -49,16 +52,20 @@ public class TransferServiceImpl implements TransferService {
     private final RabbitClient rabbitClient;
     private final ClientClient clientClient;
 
+    @Value("${transfer.verification.skip:true}")
+    private boolean skipVerification;
+
     /**
      * Glavna metoda za izvršavanje transfera.
      * Obavlja validaciju sesije, proverava vlasništvo računa u Account servisu,
      * vrši konverziju u Exchange servisu i na kraju beleži transfer u lokalnu bazu.
+     * @param jwt Token koji služi za autentifikaciju i autorizaciju korisnika.
      * @param request Detalji transfera.
      * @return DTO sa informacijama o uspehu i broju naloga.
      */
     @Transactional
     @Override
-    public TransferResponseDto executeTransfer(TransferRequestDto request) {
+    public TransferResponseDto executeTransfer(Jwt jwt, TransferRequestDto request) {
         String fromAccountNumber = request.getFromAccountNumber();
         String toAccountNumber = request.getToAccountNumber();
         Long verificationSessionId = request.getVerificationSessionId();
@@ -75,10 +82,13 @@ public class TransferServiceImpl implements TransferService {
             throw new BusinessException(ErrorCode.SAME_ACCOUNT_TRANSFER, "Ne možete prebaciti novac na isti račun sa kog šaljete.");
         }
 
-        // Validacija 2FA koda (Verification Service)
-        var verifyRes = verificationClient.validateCode(verificationSessionId, request.getVerificationCode());
-        if (!verifyRes.valid()) {
-            throw new BusinessException(ErrorCode.INVALID_VERIFICATION, "Verifikacioni kod je neispravan.");
+        if (!skipVerification) {
+            var verifyRes = verificationClient.getVerificationStatus(verificationSessionId);
+            if (!verifyRes.isVerified()) {
+                throw new BusinessException(ErrorCode.INVALID_VERIFICATION, "Verifikacija nije uspela. Trenutni status sesije: " + verifyRes.status());
+            }
+        } else {
+            log.warn("MOCK: Preskačem proveru verifikacionog koda jer je SKIP_VERIFICATION=true");
         }
 
         // Dohvatanje meta-podataka (Account Service)
@@ -87,6 +97,11 @@ public class TransferServiceImpl implements TransferService {
 
         if (fromAcc == null || toAcc == null) {
             throw new BusinessException(ErrorCode.ACCOUNT_NOT_FOUND, "Račun nije pronađen.");
+        }
+
+        Long loggedInId = getUserIdFromJwt(jwt);
+        if (!isPrivilegedUser(jwt) && !fromAcc.ownerId().equals(loggedInId)) {
+            throw new BusinessException(ErrorCode.ACCOUNT_OWNERSHIP_MISMATCH, "Ne možete inicirati transfer sa tuđeg računa.");
         }
 
         // Biznis validacija: Da li oba računa pripadaju istom klijentu?
@@ -175,9 +190,14 @@ public class TransferServiceImpl implements TransferService {
      * Baca {@link BusinessException} ako nalog ne postoji.
      */
     @Override
-    public TransferResponseDto getTransferDetails(String orderNumber) {
+    public TransferResponseDto getTransferDetails(Jwt jwt, String orderNumber) {
         Transfer transfer = transferRepository.findByOrderNumber(orderNumber)
                 .orElseThrow(() -> new BusinessException(ErrorCode.TRANSFER_NOT_FOUND, "Transfer sa brojem " + orderNumber + " ne postoji."));
+
+        if (!isPrivilegedUser(jwt) && !transfer.getClientId().equals(getUserIdFromJwt(jwt))) {
+            throw new BusinessException(ErrorCode.ACCOUNT_OWNERSHIP_MISMATCH, "Nemate prava da pregledate ovaj transfer.");
+        }
+
         return transferMapper.toDto(transfer); // Korišćenje mapplera
     }
 
@@ -185,9 +205,27 @@ public class TransferServiceImpl implements TransferService {
      * Pretražuje bazu za sve transakcije (uplate/isplate) vezane za jedan račun.
      */
     @Override
-    public Page<TransferResponseDto> getTransfersByAccountNumber(String accountNumber, Pageable pageable) {
-        // Prosleđujemo isti broj računa i za 'from' i za 'to'
-        return transferRepository.findByFromAccountNumberOrToAccountNumber(accountNumber, accountNumber, pageable)
-                .map(transferMapper::toDto);
+    public Page<TransferResponseDto> getTransfersByAccountNumber(Jwt jwt, String accountNumber, Pageable pageable) {
+        var accDetails = accountClient.getAccountDetails(accountNumber);
+        if (accDetails == null) {
+            throw new BusinessException(ErrorCode.ACCOUNT_NOT_FOUND, "Račun nije pronađen.");
+        }
+
+        if (!isPrivilegedUser(jwt) && !accDetails.ownerId().equals(getUserIdFromJwt(jwt))) {
+            throw new BusinessException(ErrorCode.ACCOUNT_OWNERSHIP_MISMATCH, "Nemate prava da listate transfere tuđeg računa.");
+        }
+
+        return transferRepository.findByFromAccountNumberOrToAccountNumber(accountNumber, accountNumber, pageable).map(transferMapper::toDto);
+    }
+
+    private Long getUserIdFromJwt(Jwt jwt) {
+        return Long.parseLong(jwt.getClaimAsString("id"));
+    }
+
+    private boolean isPrivilegedUser(Jwt jwt) {
+        List<String> roles = jwt.getClaimAsStringList("roles");
+        if (roles == null) return false;
+        // Proverava da li korisnik ima ADMIN ili SERVICE rolu
+        return roles.stream().anyMatch(r -> r.contains("ADMIN") || r.contains("SERVICE"));
     }
 }

@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import java.math.BigDecimal;
@@ -39,13 +40,12 @@ class TransferControllerTest {
         request.setFromAccountNumber("123");
         request.setToAccountNumber("456");
         request.setAmount(new BigDecimal("100.00"));
-        request.setVerificationCode("123456");
-        request.setVerificationSessionId("session-1");
+        request.setVerificationSessionId(1L);
 
         TransferResponseDto response = new TransferResponseDto();
         response.setOrderNumber("TRF-001");
 
-        when(transferService.executeTransfer(any())).thenReturn(response);
+        when(transferService.executeTransfer(any(Jwt.class), any())).thenReturn(response);
 
         mockMvc.perform(post("/")
                         .with(jwt()) // Simulira JWT bez posebnih claimova za POST jer ih kontroler ne koristi za logiku
@@ -103,7 +103,7 @@ class TransferControllerTest {
         TransferResponseDto response = new TransferResponseDto();
         response.setOrderNumber(orderNo);
 
-        when(transferService.getTransferDetails(orderNo)).thenReturn(response);
+        when(transferService.getTransferDetails(any(Jwt.class), eq(orderNo))).thenReturn(response);
 
         mockMvc.perform(get("/{orderNumber}", orderNo).with(jwt()))
                 .andExpect(status().isOk())
@@ -113,7 +113,7 @@ class TransferControllerTest {
     @Test
     void getAccountTransfers_Success() throws Exception {
         String accNo = "111222333";
-        when(transferService.getTransfersByAccountNumber(eq(accNo), any()))
+        when(transferService.getTransfersByAccountNumber(any(Jwt.class), eq(accNo), any()))
                 .thenReturn(new PageImpl<>(List.of(new TransferResponseDto())));
 
         mockMvc.perform(get("/accounts/{accountNumber}", accNo)

@@ -8,8 +8,7 @@ public interface VerificationClient {
     /**
      * Šalje zahtev za validaciju jednokratnog koda (OTP) unutar specifične sesije.
      * @param sessionId ID sesije pokrenute za verifikaciju transfera
-     * @param code kod unet od strane korisnika
      * @return DTO sa statusom verifikacije i preostalim pokušajima
      */
-    VerificationResponseDto validateCode(Long sessionId, String code);
+    VerificationResponseDto getVerificationStatus(Long sessionId);
 }

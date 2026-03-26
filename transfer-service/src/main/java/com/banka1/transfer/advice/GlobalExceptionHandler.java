@@ -139,7 +139,7 @@ public class GlobalExceptionHandler {
         ErrorResponseDto error = new ErrorResponseDto(
                 "ERR_INTERNAL_SERVER",
                 "Serverska greška",
-                ex.getMessage()
+                "Naš tim je obavešten."
         );
         return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }

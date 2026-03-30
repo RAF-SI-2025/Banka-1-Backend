@@ -1,6 +1,7 @@
 package com.banka1.transaction_service.dto.response;
 
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -33,6 +34,7 @@ public class AccountDetailsResponseDto {
 
 
     /** ID vlasnika računa (klijenta). */
+    @JsonProperty("ownerId")
     private Long vlasnik;
 
 

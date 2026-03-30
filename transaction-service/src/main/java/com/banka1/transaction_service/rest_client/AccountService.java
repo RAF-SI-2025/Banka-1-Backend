@@ -47,7 +47,7 @@ public class AccountService {
     public AccountDetailsResponseDto getDetails(String accountNumber)
     {
         return restClient.get()
-                .uri("/api/accounts/{accountNumber}", accountNumber)
+                .uri("/internal/accounts/{accountNumber}/details", accountNumber)
                 .retrieve()
                 .body(AccountDetailsResponseDto.class);
     }

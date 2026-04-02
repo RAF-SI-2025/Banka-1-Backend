@@ -4,6 +4,7 @@ import com.banka1.transaction_service.domain.enums.TransactionStatus;
 import com.banka1.transaction_service.dto.request.ApproveDto;
 import com.banka1.transaction_service.dto.request.NewPaymentDto;
 import com.banka1.transaction_service.dto.response.ErrorResponseDto;
+import com.banka1.transaction_service.dto.response.NewPaymentResponseDto;
 import com.banka1.transaction_service.dto.response.TransactionResponseDto;
 import com.banka1.transaction_service.service.TransactionService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -36,16 +37,20 @@ public class TransactionController {
     private TransactionService transactionService;
     @Operation(summary = "Create a new payment")
     @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Payment created",
+                    content = @Content(schema = @Schema(implementation = NewPaymentResponseDto.class))),
             @ApiResponse(responseCode = "400", description = "Invalid request body",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseDto.class))),
+            @ApiResponse(responseCode = "404", description = "Account not found",
                     content = @Content(schema = @Schema(implementation = ErrorResponseDto.class))),
             @ApiResponse(responseCode = "401", description = "Unauthorized",
                     content = @Content(schema = @Schema(implementation = ErrorResponseDto.class))),
             @ApiResponse(responseCode = "403", description = "Forbidden",
                     content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
     })
-    @PostMapping("/payments")
+    @PostMapping({"/payment", "/payments"})
     @PreAuthorize("hasRole('CLIENT_BASIC')")
-    public ResponseEntity<String> newPayment(@AuthenticationPrincipal Jwt jwt, @RequestBody @Valid NewPaymentDto newPaymentDto) {
+    public ResponseEntity<NewPaymentResponseDto> newPayment(@AuthenticationPrincipal Jwt jwt, @RequestBody @Valid NewPaymentDto newPaymentDto) {
         return new ResponseEntity<>(transactionService.newPayment(jwt,newPaymentDto), HttpStatus.OK);
     }
 

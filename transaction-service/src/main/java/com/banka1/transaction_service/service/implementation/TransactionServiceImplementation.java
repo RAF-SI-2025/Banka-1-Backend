@@ -27,14 +27,18 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Locale;
+import java.util.NoSuchElementException;
 
 @RequiredArgsConstructor
 @Getter
@@ -60,7 +64,7 @@ public class TransactionServiceImplementation implements TransactionService {
 
 //    @Transactional
     @Override
-    public String newPayment(Jwt jwt, NewPaymentDto newPaymentDto) {
+    public NewPaymentResponseDto newPayment(Jwt jwt, NewPaymentDto newPaymentDto) {
         if (!skipVerification) {
             VerificationStatusResponse verificationStatusResponse = verificationService.getStatus(newPaymentDto.getVerificationSessionId());
             if (verificationStatusResponse == null || !verificationStatusResponse.isVerified())
@@ -68,7 +72,15 @@ public class TransactionServiceImplementation implements TransactionService {
         } else {
             log.warn("SKIP_VERIFICATION=true, preskačem proveru verifikacionog koda");
         }
-        InfoResponseDto infoResponseDto=accountService.getInfo(newPaymentDto.getFromAccountNumber(),newPaymentDto.getToAccountNumber());
+        InfoResponseDto infoResponseDto;
+        try {
+            infoResponseDto = accountService.getInfo(newPaymentDto.getFromAccountNumber(),newPaymentDto.getToAccountNumber());
+        } catch (HttpClientErrorException ex) {
+            if (isMissingAccountError(ex)) {
+                throw new NoSuchElementException("Account number does not exist");
+            }
+            throw ex;
+        }
         if(infoResponseDto == null)
             throw new IllegalStateException("Greska sa account servisom");
         ConversionResponseDto conversionResponseDto=exchangeService.calculate(infoResponseDto.getFromCurrencyCode(),infoResponseDto.getToCurrencyCode(),newPaymentDto.getAmount());
@@ -94,8 +106,26 @@ public class TransactionServiceImplementation implements TransactionService {
         }
         transactionServiceInternal.finish(jwt,infoResponseDto,id, transactionStatus);
         if(transactionStatus==TransactionStatus.COMPLETED)
-            return "Uspesan payment";
-        return "Payment nije bio uspesan";
+            return new NewPaymentResponseDto("Uspesan payment", transactionStatus.name());
+        return new NewPaymentResponseDto("Payment nije bio uspesan", transactionStatus.name());
+    }
+
+    private boolean isMissingAccountError(HttpClientErrorException ex) {
+        if (HttpStatus.NOT_FOUND.equals(ex.getStatusCode())) {
+            return true;
+        }
+
+        if (!HttpStatus.BAD_REQUEST.equals(ex.getStatusCode())) {
+            return false;
+        }
+
+        String body = ex.getResponseBodyAsString();
+        if (body == null) {
+            return false;
+        }
+
+        String normalized = body.toLowerCase(Locale.ROOT);
+        return normalized.contains("ne postoji") && normalized.contains("racun");
     }
 
     @Transactional

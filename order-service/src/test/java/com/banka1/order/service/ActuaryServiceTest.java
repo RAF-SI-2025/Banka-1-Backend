@@ -123,7 +123,7 @@ class ActuaryServiceTest {
 
         assertThatThrownBy(() -> actuaryService.setLimit(2L, request))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("adminu");
+                .hasMessageContaining("admin");
     }
 
     @Test

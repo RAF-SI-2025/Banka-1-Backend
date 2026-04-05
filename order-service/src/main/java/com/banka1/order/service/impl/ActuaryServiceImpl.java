@@ -16,6 +16,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.List;
 
+/**
+ * Default implementation of {@link ActuaryService}.
+ * Combines employee data from employee-service with local {@link ActuaryInfo} records.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -24,6 +28,11 @@ public class ActuaryServiceImpl implements ActuaryService {
     private final ActuaryInfoRepository actuaryInfoRepository;
     private final EmployeeClient employeeClient;
 
+    /**
+     * {@inheritDoc}
+     * Fetches up to 200 employees per page from employee-service, filters to AGENT role,
+     * and merges with local actuary limit data.
+     */
     @Override
     public List<ActuaryAgentDto> getAgents(String email, String ime, String prezime, String pozicija) {
         EmployeePageResponse page = employeeClient.searchEmployees(email, ime, prezime, pozicija, 0, 200);
@@ -38,16 +47,19 @@ public class ActuaryServiceImpl implements ActuaryService {
                 .toList();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     @Transactional
     public void setLimit(Long employeeId, SetLimitRequestDto request) {
         EmployeeDto employee = employeeClient.getEmployee(employeeId);
 
         if ("ADMIN".equals(employee.getRole())) {
-            throw new IllegalArgumentException("Nije moguće menjati limit adminu.");
+            throw new IllegalArgumentException("Cannot change the limit of an admin.");
         }
         if (!"AGENT".equals(employee.getRole())) {
-            throw new IllegalArgumentException("Limit se može postaviti samo agentu.");
+            throw new IllegalArgumentException("Limit can only be set for employees with the AGENT role.");
         }
 
         ActuaryInfo info = actuaryInfoRepository.findByEmployeeId(employeeId)
@@ -57,13 +69,16 @@ public class ActuaryServiceImpl implements ActuaryService {
         actuaryInfoRepository.save(info);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     @Transactional
     public void resetLimit(Long employeeId) {
         EmployeeDto employee = employeeClient.getEmployee(employeeId);
 
         if ("ADMIN".equals(employee.getRole())) {
-            throw new IllegalArgumentException("Nije moguće resetovati limit adminu.");
+            throw new IllegalArgumentException("Cannot reset the limit of an admin.");
         }
 
         ActuaryInfo info = actuaryInfoRepository.findByEmployeeId(employeeId)
@@ -73,10 +88,13 @@ public class ActuaryServiceImpl implements ActuaryService {
         actuaryInfoRepository.save(info);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     @Transactional
     public void resetAllLimits() {
-        log.info("Automatski reset usedLimit za sve agente.");
+        log.info("Resetting usedLimit for all actuary records.");
         List<ActuaryInfo> all = actuaryInfoRepository.findAll();
         for (ActuaryInfo info : all) {
             info.setUsedLimit(BigDecimal.ZERO);
@@ -84,6 +102,13 @@ public class ActuaryServiceImpl implements ActuaryService {
         actuaryInfoRepository.saveAll(all);
     }
 
+    /**
+     * Creates and persists a new {@link ActuaryInfo} with default values for the given employee.
+     * Used when an agent appears in employee-service but has no local actuary record yet.
+     *
+     * @param employeeId the employee's identifier
+     * @return the newly saved actuary record
+     */
     private ActuaryInfo createDefaultActuaryInfo(Long employeeId) {
         ActuaryInfo info = new ActuaryInfo();
         info.setEmployeeId(employeeId);
@@ -92,6 +117,13 @@ public class ActuaryServiceImpl implements ActuaryService {
         return actuaryInfoRepository.save(info);
     }
 
+    /**
+     * Maps an employee DTO and its actuary info to the combined response DTO.
+     *
+     * @param emp  employee data from employee-service
+     * @param info local actuary limit record
+     * @return combined agent DTO
+     */
     private ActuaryAgentDto toDto(EmployeeDto emp, ActuaryInfo info) {
         ActuaryAgentDto dto = new ActuaryAgentDto();
         dto.setEmployeeId(emp.getId());

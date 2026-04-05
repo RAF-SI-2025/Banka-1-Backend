@@ -8,6 +8,10 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+/**
+ * RestClient-based implementation of {@link AccountClient}.
+ * Active in all profiles except "local".
+ */
 @Component
 @Profile("!local")
 @RequiredArgsConstructor
@@ -16,6 +20,9 @@ public class AccountClientImpl implements AccountClient {
 
     private final RestClient accountRestClient;
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public AccountDetailsDto getAccountDetails(String accountNumber) {
         return accountRestClient.get()

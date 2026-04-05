@@ -10,6 +10,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * RabbitMQ infrastructure configuration.
+ * Sets up the connection factory, message template, JSON converter,
+ * and the topic exchange used for order and tax notifications.
+ */
 @Configuration
 public class RabbitConfig {
 
@@ -28,6 +33,11 @@ public class RabbitConfig {
     @Value("${spring.rabbitmq.password}")
     private String rabbitPassword;
 
+    /**
+     * Creates a connection factory using the RabbitMQ host and credentials from properties.
+     *
+     * @return configured {@link CachingConnectionFactory}
+     */
     @Bean
     public ConnectionFactory connectionFactory() {
         CachingConnectionFactory connectionFactory = new CachingConnectionFactory(rabbitHost);
@@ -37,6 +47,13 @@ public class RabbitConfig {
         return connectionFactory;
     }
 
+    /**
+     * Creates a {@link RabbitTemplate} with JSON message conversion enabled.
+     *
+     * @param connectionFactory the connection factory
+     * @param jacksonMessageConverter the JSON converter
+     * @return configured RabbitTemplate
+     */
     @Bean
     public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory, MessageConverter jacksonMessageConverter) {
         RabbitTemplate template = new RabbitTemplate(connectionFactory);
@@ -44,11 +61,21 @@ public class RabbitConfig {
         return template;
     }
 
+    /**
+     * Jackson-based message converter that serializes DTOs to JSON automatically.
+     *
+     * @return {@link JacksonJsonMessageConverter}
+     */
     @Bean
     public MessageConverter jacksonMessageConverter() {
         return new JacksonJsonMessageConverter();
     }
 
+    /**
+     * Declares the topic exchange used for order and tax event routing.
+     *
+     * @return the configured {@link TopicExchange}
+     */
     @Bean
     public TopicExchange orderExchange() {
         return new TopicExchange(exchangeName);

@@ -10,6 +10,10 @@ import org.springframework.web.client.RestClient;
 
 import java.math.BigDecimal;
 
+/**
+ * RestClient-based implementation of {@link ExchangeClient}.
+ * Active in all profiles except "local".
+ */
 @Component
 @Profile("!local")
 @RequiredArgsConstructor
@@ -18,6 +22,9 @@ public class ExchangeClientImpl implements ExchangeClient {
 
     private final RestClient exchangeRestClient;
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public ExchangeRateDto calculate(String fromCurrency, String toCurrency, BigDecimal amount) {
         return exchangeRestClient.get()

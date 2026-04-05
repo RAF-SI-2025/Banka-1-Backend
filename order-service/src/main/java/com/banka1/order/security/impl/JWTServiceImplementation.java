@@ -16,6 +16,11 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * Nimbus-JOSE-JWT implementation of {@link JWTService}.
+ * Generates HS256-signed service tokens used for inter-service communication.
+ * The token identifies the caller as "order-service" with the SERVICE role.
+ */
 @Service
 @Getter
 public class JWTServiceImplementation implements JWTService {
@@ -34,10 +39,22 @@ public class JWTServiceImplementation implements JWTService {
     @Value("${banka.security.expiration-time:3600000}")
     private Long expirationTime;
 
+    /**
+     * Initializes the HMAC signer with the shared JWT secret.
+     *
+     * @param secret the shared secret from {@code jwt.secret} property
+     * @throws KeyLengthException if the secret is too short for HS256
+     */
     public JWTServiceImplementation(@Value("${jwt.secret}") String secret) throws KeyLengthException {
         this.signer = new MACSigner(secret);
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The token uses subject "order-service", role "SERVICE", and an empty permissions list.
+     * Expiration is controlled by {@code banka.security.expiration-time}.
+     */
     @Override
     public String generateJwtToken() {
         List<String> permissions = new ArrayList<>();
@@ -55,7 +72,7 @@ public class JWTServiceImplementation implements JWTService {
         try {
             jwt.sign(signer);
         } catch (Exception e) {
-            throw new IllegalStateException("Greška pri potpisivanju sistemskog JWT-a", e);
+            throw new IllegalStateException("Failed to sign service JWT", e);
         }
         return jwt.serialize();
     }

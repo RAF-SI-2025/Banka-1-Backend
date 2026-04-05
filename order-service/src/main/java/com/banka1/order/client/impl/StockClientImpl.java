@@ -9,6 +9,10 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+/**
+ * RestClient-based implementation of {@link StockClient}.
+ * Active in all profiles except "local".
+ */
 @Component
 @Profile("!local")
 @RequiredArgsConstructor
@@ -17,6 +21,9 @@ public class StockClientImpl implements StockClient {
 
     private final RestClient stockRestClient;
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public StockListingDto getListing(Long id) {
         return stockRestClient.get()
@@ -25,6 +32,9 @@ public class StockClientImpl implements StockClient {
                 .body(StockListingDto.class);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public StockExchangeDto getStockExchange(Long id) {
         return stockRestClient.get()
@@ -33,6 +43,9 @@ public class StockClientImpl implements StockClient {
                 .body(StockExchangeDto.class);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Boolean isStockExchangeOpen(Long id) {
         return stockRestClient.get()

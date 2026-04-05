@@ -11,6 +11,10 @@ import org.springframework.web.client.RestClient;
 
 import java.util.Optional;
 
+/**
+ * RestClient-based implementation of {@link EmployeeClient}.
+ * Active in all profiles except "local".
+ */
 @Component
 @Profile("!local")
 @RequiredArgsConstructor
@@ -19,6 +23,9 @@ public class EmployeeClientImpl implements EmployeeClient {
 
     private final RestClient employeeRestClient;
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public EmployeeDto getEmployee(Long id) {
         return employeeRestClient.get()
@@ -27,6 +34,9 @@ public class EmployeeClientImpl implements EmployeeClient {
                 .body(EmployeeDto.class);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public EmployeePageResponse searchEmployees(String email, String ime, String prezime, String pozicija, int page, int size) {
         return employeeRestClient.get()

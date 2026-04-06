@@ -15,4 +15,4 @@ include 'transfer-service'
 include 'exchange-service'
 include 'verification-service'
 include 'transaction-service'
-
+include 'stock-service'

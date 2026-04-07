@@ -371,8 +371,65 @@ jobs:
             docker rm -f "ci-$SERVICE" >/dev/null 2>&1 || true
           fi
 
-  # ── TODO: Docker Build & Push to Registry ────────────────────────────────
-  # Configure once a container registry is available.
+  # ── Push to GitHub Container Registry ────────────────────────────────────
+  push-to-registry:
+    name: Push to GHCR (${{ matrix.service }})
+    needs: [ detect-changes, docker-validate ]
+    if: |
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      needs.detect-changes.outputs.services != '[]' &&
+      needs.detect-changes.outputs.services != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJson(needs.detect-changes.outputs.services) }}
+
+    steps:
+      - uses: actions/checkout@v4.2.2
+
+      - name: Check for Dockerfile
+        id: check
+        run: |
+          SERVICE="${{ matrix.service }}"
+          if [ -f "$SERVICE/Dockerfile" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "No Dockerfile found in $SERVICE, skipping push."
+          fi
+
+      - name: Log in to GitHub Container Registry
+        if: steps.check.outputs.exists == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        if: steps.check.outputs.exists == 'true'
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/${{ matrix.service }}
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=dev,enable=${{ github.ref == 'refs/heads/dev' }}
+            type=sha,prefix=,format=short
+
+      - name: Build and push Docker image
+        if: steps.check.outputs.exists == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.service }}/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
 
 
 

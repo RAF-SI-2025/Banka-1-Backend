@@ -41,13 +41,6 @@ import java.util.stream.Collectors;
  *     <li>if a MIC code already exists and all imported values are the same, the row is counted as unchanged</li>
  * </ul>
  *
- * <p>This service currently supports two CSV header styles:
- *
- * <ul>
- *     <li>legacy format using headers such as {@code Acronym}, {@code MIC Code}, {@code Polity}</li>
- *     <li>newer format using headers such as {@code Exchange Acronym}, {@code Exchange Mic Code}, {@code Country}</li>
- * </ul>
- *
  * <p>The default seed file is now {@code classpath:seed/exchanges.csv}.
  * That file contains regular market hours but does not contain pre-market, post-market, or {@code Is Active} columns,
  * so this importer fills those missing optional values as follows:
@@ -63,19 +56,24 @@ import java.util.stream.Collectors;
 public class CsvImportService {
 
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("H:mm");
-    private static final List<List<String>> REQUIRED_HEADER_ALIASES = List.of(
-            List.of("Exchange Name"),
-            List.of("Acronym", "Exchange Acronym"),
-            List.of("MIC Code", "Exchange Mic Code"),
-            List.of("Polity", "Country"),
-            List.of("Currency"),
-            List.of("Time Zone"),
-            List.of("Open Time"),
-            List.of("Close Time")
+    private static final List<String> REQUIRED_HEADERS = List.of(
+            "Exchange Name",
+            "Exchange Acronym",
+            "Exchange Mic Code",
+            "Country",
+            "Currency",
+            "Time Zone",
+            "Open Time",
+            "Close Time"
     );
-    private static final List<String> ACRONYM_HEADERS = List.of("Acronym", "Exchange Acronym");
-    private static final List<String> MIC_CODE_HEADERS = List.of("MIC Code", "Exchange Mic Code");
-    private static final List<String> POLITY_HEADERS = List.of("Polity", "Country");
+    private static final List<String> EXCHANGE_NAME_HEADERS = List.of("Exchange Name");
+    private static final List<String> ACRONYM_HEADERS = List.of("Exchange Acronym");
+    private static final List<String> MIC_CODE_HEADERS = List.of("Exchange Mic Code");
+    private static final List<String> POLITY_HEADERS = List.of("Country");
+    private static final List<String> CURRENCY_HEADERS = List.of("Currency");
+    private static final List<String> TIME_ZONE_HEADERS = List.of("Time Zone");
+    private static final List<String> OPEN_TIME_HEADERS = List.of("Open Time");
+    private static final List<String> CLOSE_TIME_HEADERS = List.of("Close Time");
     private static final List<String> PRE_MARKET_OPEN_HEADERS = List.of("Pre Market Open Time");
     private static final List<String> PRE_MARKET_CLOSE_HEADERS = List.of("Pre Market Close Time");
     private static final List<String> POST_MARKET_OPEN_HEADERS = List.of("Post Market Open Time");
@@ -213,7 +211,7 @@ public class CsvImportService {
      * <ul>
      *     <li>resource existence</li>
      *     <li>non-empty header row</li>
-     *     <li>presence of required headers or their aliases</li>
+     *     <li>presence of required headers from the supported {@code exchanges.csv} format</li>
      *     <li>consistent column count per row</li>
      *     <li>duplicate MIC-code detection inside the same CSV file</li>
      *     <li>valid time and boolean parsing</li>
@@ -302,15 +300,7 @@ public class CsvImportService {
     }
 
     /**
-     * Validates that all required business columns exist, allowing for supported aliases.
-     *
-     * <p>Examples:
-     *
-     * <ul>
-     *     <li>for the acronym column, either {@code Acronym} or {@code Exchange Acronym} is accepted</li>
-     *     <li>for the MIC code column, either {@code MIC Code} or {@code Exchange Mic Code} is accepted</li>
-     *     <li>for the country/polity column, either {@code Polity} or {@code Country} is accepted</li>
-     * </ul>
+     * Validates that all required business columns from {@code exchanges.csv} exist.
      *
      * <p>Optional columns such as pre-market, post-market, and {@code Is Active} are not checked here.
      *
@@ -318,10 +308,10 @@ public class CsvImportService {
      * @param source source label used in error messages
      */
     private void validateHeaders(Map<String, Integer> headerIndexes, String source) {
-        for (List<String> aliases : REQUIRED_HEADER_ALIASES) {
-            if (resolveHeader(headerIndexes, aliases) == null) {
+        for (String requiredHeader : REQUIRED_HEADERS) {
+            if (!headerIndexes.containsKey(requiredHeader)) {
                 throw new IllegalArgumentException(
-                        "Missing required CSV header. Expected one of " + aliases + " in " + source
+                        "Missing required CSV header '" + requiredHeader + "' in " + source
                 );
             }
         }
@@ -353,14 +343,14 @@ public class CsvImportService {
             String source
     ) {
         return new StockExchangeCsvRow(
-                requiredValue(values, headerIndexes, List.of("Exchange Name"), lineNumber, source),
+                requiredValue(values, headerIndexes, EXCHANGE_NAME_HEADERS, lineNumber, source),
                 requiredValue(values, headerIndexes, ACRONYM_HEADERS, lineNumber, source),
                 requiredValue(values, headerIndexes, MIC_CODE_HEADERS, lineNumber, source),
                 requiredValue(values, headerIndexes, POLITY_HEADERS, lineNumber, source),
-                requiredValue(values, headerIndexes, List.of("Currency"), lineNumber, source),
-                requiredValue(values, headerIndexes, List.of("Time Zone"), lineNumber, source),
-                parseTime(requiredValue(values, headerIndexes, List.of("Open Time"), lineNumber, source), "Open Time", lineNumber, source),
-                parseTime(requiredValue(values, headerIndexes, List.of("Close Time"), lineNumber, source), "Close Time", lineNumber, source),
+                requiredValue(values, headerIndexes, CURRENCY_HEADERS, lineNumber, source),
+                requiredValue(values, headerIndexes, TIME_ZONE_HEADERS, lineNumber, source),
+                parseTime(requiredValue(values, headerIndexes, OPEN_TIME_HEADERS, lineNumber, source), "Open Time", lineNumber, source),
+                parseTime(requiredValue(values, headerIndexes, CLOSE_TIME_HEADERS, lineNumber, source), "Close Time", lineNumber, source),
                 parseOptionalTime(optionalValue(values, headerIndexes, PRE_MARKET_OPEN_HEADERS), "Pre Market Open Time", lineNumber, source),
                 parseOptionalTime(optionalValue(values, headerIndexes, PRE_MARKET_CLOSE_HEADERS), "Pre Market Close Time", lineNumber, source),
                 parseOptionalTime(optionalValue(values, headerIndexes, POST_MARKET_OPEN_HEADERS), "Post Market Open Time", lineNumber, source),
@@ -409,35 +399,11 @@ public class CsvImportService {
      * @return trimmed value or {@code null}
      */
     private String optionalValue(List<String> values, Map<String, Integer> headerIndexes, List<String> headers) {
-        String resolvedHeader = resolveHeader(headerIndexes, headers);
-        if (resolvedHeader == null) {
-            return null;
-        }
-        Integer index = headerIndexes.get(resolvedHeader);
+        Integer index = headerIndexes.get(headers.getFirst());
         if (index == null || index >= values.size()) {
             return null;
         }
         return values.get(index).trim();
-    }
-
-    /**
-     * Resolves which header alias is actually present in the current file.
-     *
-     * <p>Example:
-     * if the accepted aliases are {@code ["MIC Code", "Exchange Mic Code"]}
-     * and the file contains {@code Exchange Mic Code}, that exact header name is returned.
-     *
-     * @param headerIndexes indexed CSV headers
-     * @param aliases accepted header aliases
-     * @return concrete header name present in the file or {@code null}
-     */
-    private String resolveHeader(Map<String, Integer> headerIndexes, List<String> aliases) {
-        for (String alias : aliases) {
-            if (headerIndexes.containsKey(alias)) {
-                return alias;
-            }
-        }
-        return null;
     }
 
     /**

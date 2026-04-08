@@ -402,6 +402,14 @@ jobs:
             echo "No Dockerfile found in $SERVICE, skipping push."
           fi
 
+      - name: Set up QEMU
+        if: steps.check.outputs.exists == 'true'
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        if: steps.check.outputs.exists == 'true'
+        uses: docker/setup-buildx-action@v3
+
       - name: Log in to GitHub Container Registry
         if: steps.check.outputs.exists == 'true'
         uses: docker/login-action@v3
@@ -428,6 +436,7 @@ jobs:
           context: .
           file: ${{ matrix.service }}/Dockerfile
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 

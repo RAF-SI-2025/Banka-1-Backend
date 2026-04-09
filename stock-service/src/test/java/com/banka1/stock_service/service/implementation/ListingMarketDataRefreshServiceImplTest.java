@@ -169,6 +169,42 @@ class ListingMarketDataRefreshServiceImplTest {
     }
 
     @Test
+    void refreshListingLeavesPlaceholderForexValuesUntouchedWhenProviderPairIsUnavailable() {
+        Listing listing = createListing(11L, 5L, ListingType.FOREX, "RSD/JPY", new BigDecimal("0.00000000"));
+        listing.setVolume(0L);
+
+        ForexPair forexPair = new ForexPair();
+        forexPair.setId(5L);
+        forexPair.setTicker("RSD/JPY");
+        forexPair.setBaseCurrency("RSD");
+        forexPair.setQuoteCurrency("JPY");
+        forexPair.setExchangeRate(new BigDecimal("0.00000000"));
+        forexPair.setLiquidity(Liquidity.HIGH);
+
+        when(listingRepository.findById(11L)).thenReturn(Optional.of(listing));
+        when(forexPairRepository.findById(5L)).thenReturn(Optional.of(forexPair));
+        when(alphaVantageClient.fetchExchangeRate("RSD", "JPY"))
+                .thenThrow(new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Pair not available"));
+
+        assertThatThrownBy(() -> serviceAt("2026-04-08T16:05:00Z").refreshListing(11L))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(exception -> assertThat(((ResponseStatusException) exception).getStatusCode())
+                        .isEqualTo(HttpStatus.BAD_GATEWAY));
+
+        assertThat(forexPair.getExchangeRate()).isEqualByComparingTo("0.00000000");
+        assertThat(listing.getPrice()).isEqualByComparingTo("0.00000000");
+        assertThat(listing.getAsk()).isEqualByComparingTo("0.00000000");
+        assertThat(listing.getBid()).isEqualByComparingTo("0.00000000");
+        assertThat(listing.getChange()).isEqualByComparingTo("0");
+        assertThat(listing.getVolume()).isZero();
+        assertThat(listing.getLastRefresh()).isEqualTo(LocalDateTime.of(2026, 4, 7, 9, 0));
+
+        verify(forexPairRepository, never()).save(any());
+        verify(listingDailyPriceInfoRepository, never()).save(any());
+        verify(listingRepository, never()).save(listing);
+    }
+
+    @Test
     void refreshListingRejectsUnsupportedFuturesListing() {
         Listing listing = createListing(12L, 8L, ListingType.FUTURES, "CRUDEOILENERGY", new BigDecimal("1.00000000"));
 

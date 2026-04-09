@@ -49,20 +49,6 @@ public class ForexPairApiImportService {
      */
     private static final String SOURCE = "alpha-vantage:supported-forex-pairs";
 
-    /**
-     * Ordered set of currencies supported by the current issue specification.
-     */
-    private static final List<String> SUPPORTED_CURRENCIES = List.of(
-            "RSD",
-            "EUR",
-            "CHF",
-            "USD",
-            "GBP",
-            "JPY",
-            "CAD",
-            "AUD"
-    );
-
     private static final String PREFERRED_FOREX_EXCHANGE_MIC = "XNAS";
     private static final BigDecimal ZERO_CHANGE = new BigDecimal("0.00000000");
 
@@ -89,8 +75,8 @@ public class ForexPairApiImportService {
         int updatedCount = 0;
         int unchangedCount = 0;
 
-        for (String baseCurrency : SUPPORTED_CURRENCIES) {
-            for (String quoteCurrency : SUPPORTED_CURRENCIES) {
+        for (String baseCurrency : ForexSupportedCurrencies.values()) {
+            for (String quoteCurrency : ForexSupportedCurrencies.values()) {
                 if (baseCurrency.equals(quoteCurrency)) {
                     continue;
                 }

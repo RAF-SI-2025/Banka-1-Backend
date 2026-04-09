@@ -29,7 +29,7 @@ public class SeedRunner implements ApplicationRunner {
     private final StockExchangeCsvImportService stockExchangeCsvImportService;
     private final FuturesContractCsvImportService futuresContractCsvImportService;
     private final StockTickerSeedService stockTickerSeedService;
-    private final ForexPairApiImportService forexPairApiImportService;
+    private final ForexPairSeedService forexPairSeedService;
     private final StockExchangeSeedProperties stockExchangeSeedProperties;
     private final FuturesContractSeedProperties futuresContractSeedProperties;
     private final StockTickerSeedProperties stockTickerSeedProperties;
@@ -86,9 +86,9 @@ public class SeedRunner implements ApplicationRunner {
         }
 
         if (forexPairSeedProperties.enabled()) {
-            ForexPairImportResponse importResponse = forexPairApiImportService.importSupportedPairs();
+            ForexPairImportResponse importResponse = forexPairSeedService.seedSupportedPairs();
             log.info(
-                    "FX pairs imported from {}. processedRows={}, createdCount={}, updatedCount={}, unchangedCount={}",
+                    "FX pairs seeded from {}. processedRows={}, createdCount={}, updatedCount={}, unchangedCount={}",
                     importResponse.source(),
                     importResponse.processedRows(),
                     importResponse.createdCount(),
@@ -96,7 +96,7 @@ public class SeedRunner implements ApplicationRunner {
                     importResponse.unchangedCount()
             );
         } else {
-            log.info("FX pair API seeding is disabled.");
+            log.info("FX pair seeding is disabled.");
         }
     }
 }

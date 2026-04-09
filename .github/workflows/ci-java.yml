@@ -285,7 +285,6 @@ jobs:
           npx redocly lint "$SPEC"
           echo "✅ OpenAPI spec is valid."
 
-  # ── Docker Build Validation ───────────────────────────────────────────────
   # ── Docker Build & Run Validation ─────────────────────────────────────────
   docker-validate:
     name: Docker Build & Run Validation (${{ matrix.service }})
@@ -300,7 +299,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4.2.2
 
-      # ── Check if Dockerfile exists in the service folder
       - name: Check for Dockerfile
         id: check
         run: |
@@ -312,7 +310,6 @@ jobs:
             echo "No Dockerfile found in $SERVICE, skipping Docker validation."
           fi
 
-      # ── Build Docker image from repo root
       - name: Build Docker image
         if: steps.check.outputs.exists == 'true'
         run: |
@@ -321,7 +318,6 @@ jobs:
           docker build -f "$SERVICE/Dockerfile" . \
             -t "ci-test/$SERVICE:latest"
 
-      # ── Test Docker image starts successfully
       - name: Test Docker image runs
         if: steps.check.outputs.exists == 'true'
         run: |
@@ -402,9 +398,10 @@ jobs:
             echo "No Dockerfile found in $SERVICE, skipping push."
           fi
 
-      - name: Set up QEMU
+      - name: Convert repository name to lowercase
         if: steps.check.outputs.exists == 'true'
-        uses: docker/setup-qemu-action@v3
+        id: string
+        run: echo "lowercase=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
 
       - name: Set up Docker Buildx
         if: steps.check.outputs.exists == 'true'
@@ -423,7 +420,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}/${{ matrix.service }}
+          images: ghcr.io/${{ steps.string.outputs.lowercase }}/${{ matrix.service }}
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=raw,value=dev,enable=${{ github.ref == 'refs/heads/dev' }}
@@ -436,10 +433,11 @@ jobs:
           context: .
           file: ${{ matrix.service }}/Dockerfile
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
 
   # ── TODO: Deploy to Dev Environment ──────────────────────────────────────

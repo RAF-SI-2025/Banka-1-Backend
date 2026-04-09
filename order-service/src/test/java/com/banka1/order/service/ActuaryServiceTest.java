@@ -14,6 +14,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import org.springframework.data.domain.PageRequest;
+
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
@@ -74,11 +76,11 @@ class ActuaryServiceTest {
         when(employeeClient.searchEmployees(null, null, null, null, 0, 100)).thenReturn(page);
         when(actuaryInfoRepository.findByEmployeeId(1L)).thenReturn(Optional.of(actuaryInfo));
 
-        var result = actuaryService.getAgents(null, null, null, null);
+        var result = actuaryService.getAgents(null, null, null, null, PageRequest.of(0, 100));
 
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).getEmployeeId()).isEqualTo(1L);
-        assertThat(result.get(0).getLimit()).isEqualByComparingTo("100000.00");
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getEmployeeId()).isEqualTo(1L);
+        assertThat(result.getContent().get(0).getLimit()).isEqualByComparingTo("100000.00");
     }
 
     @Test
@@ -96,10 +98,10 @@ class ActuaryServiceTest {
         when(actuaryInfoRepository.findByEmployeeId(1L)).thenReturn(Optional.empty());
         when(actuaryInfoRepository.save(any())).thenReturn(newInfo);
 
-        var result = actuaryService.getAgents(null, null, null, null);
+        var result = actuaryService.getAgents(null, null, null, null, PageRequest.of(0, 100));
 
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).getUsedLimit()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getUsedLimit()).isEqualByComparingTo(BigDecimal.ZERO);
     }
 
     @Test
@@ -132,10 +134,10 @@ class ActuaryServiceTest {
         when(actuaryInfoRepository.findByEmployeeId(1L)).thenReturn(Optional.of(actuaryInfo));
         when(actuaryInfoRepository.findByEmployeeId(4L)).thenReturn(Optional.of(secondInfo));
 
-        var result = actuaryService.getAgents(null, null, null, null);
+        var result = actuaryService.getAgents(null, null, null, null, PageRequest.of(0, 100));
 
-        assertThat(result).hasSize(2);
-        assertThat(result).extracting("employeeId").containsExactlyInAnyOrder(1L, 4L);
+        assertThat(result.getContent()).hasSize(2);
+        assertThat(result.getContent()).extracting("employeeId").containsExactlyInAnyOrder(1L, 4L);
         verify(employeeClient).searchEmployees(null, null, null, null, 0, 100);
         verify(employeeClient).searchEmployees(null, null, null, null, 1, 100);
         verify(employeeClient, never()).searchEmployees(null, null, null, null, 0, 200);

@@ -1,6 +1,10 @@
 package com.banka1.order.controller;
 
 import com.banka1.order.service.TaxService;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -79,8 +83,11 @@ public class TaxController {
      */
     @GetMapping("/tax/capital-gains/debts")
     @PreAuthorize("hasRole('SUPERVISOR')")
-    public ResponseEntity<List<com.banka1.order.dto.TaxDebtResponse>> getAllDebts() {
-        return ResponseEntity.ok(taxService.getAllDebts());
+    public ResponseEntity<Page<com.banka1.order.dto.TaxDebtResponse>> getAllDebts(
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(100) int size
+    ) {
+        return ResponseEntity.ok(taxService.getAllDebts(PageRequest.of(page, size)));
     }
 
     /**
@@ -97,11 +104,13 @@ public class TaxController {
 
     @GetMapping("/tax/tracking")
     @PreAuthorize("hasRole('SUPERVISOR')")
-    public ResponseEntity<List<com.banka1.order.dto.TaxTrackingRowResponse>> getTaxTracking(
+    public ResponseEntity<Page<com.banka1.order.dto.TaxTrackingRowResponse>> getTaxTracking(
             @RequestParam(required = false) String userType,
             @RequestParam(required = false) String firstName,
-            @RequestParam(required = false) String lastName
+            @RequestParam(required = false) String lastName,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(100) int size
     ) {
-        return ResponseEntity.ok(taxService.getTaxTracking(userType, firstName, lastName));
+        return ResponseEntity.ok(taxService.getTaxTracking(userType, firstName, lastName, PageRequest.of(page, size)));
     }
 }

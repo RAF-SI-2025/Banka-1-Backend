@@ -9,7 +9,11 @@ import com.banka1.order.dto.PartialCancelOrderRequest;
 import com.banka1.order.entity.enums.OrderOverviewStatusFilter;
 import com.banka1.order.service.OrderCreationService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -63,10 +67,12 @@ public class OrderController {
 
     @GetMapping
     @PreAuthorize("hasRole('SUPERVISOR')")
-    public ResponseEntity<List<OrderOverviewResponse>> getOrders(
-            @RequestParam(defaultValue = "ALL") OrderOverviewStatusFilter status
+    public ResponseEntity<Page<OrderOverviewResponse>> getOrders(
+            @RequestParam(defaultValue = "ALL") OrderOverviewStatusFilter status,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(100) int size
     ) {
-        return ResponseEntity.ok(orderCreationService.getOrders(status));
+        return ResponseEntity.ok(orderCreationService.getOrders(status, PageRequest.of(page, size)));
     }
 
     @PostMapping("/{id}/confirm")

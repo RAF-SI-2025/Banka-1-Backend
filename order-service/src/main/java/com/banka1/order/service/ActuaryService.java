@@ -2,6 +2,8 @@ package com.banka1.order.service;
 
 import com.banka1.order.dto.ActuaryAgentDto;
 import com.banka1.order.dto.SetLimitRequestDto;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -23,7 +25,7 @@ public interface ActuaryService {
      * @param pozicija optional position filter
      * @return list of agent DTOs with actuary limit information
      */
-    List<ActuaryAgentDto> getAgents(String email, String ime, String prezime, String pozicija);
+    Page<ActuaryAgentDto> getAgents(String email, String ime, String prezime, String pozicija, Pageable pageable);
 
     /**
      * Updates the daily trading limit for the specified agent.

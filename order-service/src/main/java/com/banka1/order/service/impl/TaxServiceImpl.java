@@ -27,6 +27,9 @@ import com.banka1.order.service.TaxService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -121,7 +124,7 @@ public class TaxServiceImpl implements TaxService {
     }
 
     @Override
-    public List<TaxDebtResponse> getAllDebts() {
+    public Page<TaxDebtResponse> getAllDebts(Pageable pageable) {
         log.info("Fetching all tax debts");
         Map<Long, BigDecimal> debtMap = new HashMap<>();
 
@@ -129,9 +132,17 @@ public class TaxServiceImpl implements TaxService {
             debtMap.merge(entry.userId(), entry.taxAmount(), BigDecimal::add);
         }
 
-        return debtMap.entrySet().stream()
+        List<TaxDebtResponse> all = debtMap.entrySet().stream()
                 .map(entry -> new TaxDebtResponse(entry.getKey(), entry.getValue()))
                 .toList();
+
+        if (pageable.isUnpaged()) {
+            return new PageImpl<>(all, pageable, all.size());
+        }
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), all.size());
+        List<TaxDebtResponse> slice = start >= all.size() ? List.of() : all.subList(start, end);
+        return new PageImpl<>(slice, pageable, all.size());
     }
 
     @Override
@@ -161,18 +172,24 @@ public class TaxServiceImpl implements TaxService {
     }
 
     @Override
-    public List<TaxTrackingRowResponse> getTaxTracking(String userType, String firstName, String lastName) {
+    public Page<TaxTrackingRowResponse> getTaxTracking(String userType, String firstName, String lastName, Pageable pageable) {
         Map<Long, BigDecimal> debtMap = calculateDebtMapInRsd(null, HISTORY_START, LocalDateTime.now());
-        List<TaxTrackingRowResponse> rows = new ArrayList<>();
+        List<TaxTrackingRowResponse> all = new ArrayList<>();
 
         if (userType == null || "CLIENT".equalsIgnoreCase(userType)) {
-            rows.addAll(loadClientTrackingRows(firstName, lastName, debtMap));
+            all.addAll(loadClientTrackingRows(firstName, lastName, debtMap));
         }
         if (userType == null || "ACTUARY".equalsIgnoreCase(userType)) {
-            rows.addAll(loadActuaryTrackingRows(firstName, lastName, debtMap));
+            all.addAll(loadActuaryTrackingRows(firstName, lastName, debtMap));
         }
 
-        return rows;
+        if (pageable.isUnpaged()) {
+            return new PageImpl<>(all, pageable, all.size());
+        }
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), all.size());
+        List<TaxTrackingRowResponse> slice = start >= all.size() ? List.of() : all.subList(start, end);
+        return new PageImpl<>(slice, pageable, all.size());
     }
 
     private BigDecimal calculateTaxForRange(Long userId, LocalDateTime start, LocalDateTime end) {

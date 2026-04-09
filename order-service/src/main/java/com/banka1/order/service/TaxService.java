@@ -2,6 +2,8 @@ package com.banka1.order.service;
 
 import com.banka1.order.dto.TaxDebtResponse;
 import com.banka1.order.dto.TaxTrackingRowResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -65,7 +67,7 @@ public interface TaxService {
      *
      * @return list of users with their tax debts
      */
-    List<TaxDebtResponse> getAllDebts();
+    Page<TaxDebtResponse> getAllDebts(Pageable pageable);
 
     /**
      * Retrieves tax debt for a specific user.
@@ -99,5 +101,5 @@ public interface TaxService {
      * @param lastName optional last name filter
      * @return tax tracking rows with debt in RSD
      */
-    List<TaxTrackingRowResponse> getTaxTracking(String userType, String firstName, String lastName);
+    Page<TaxTrackingRowResponse> getTaxTracking(String userType, String firstName, String lastName, Pageable pageable);
 }

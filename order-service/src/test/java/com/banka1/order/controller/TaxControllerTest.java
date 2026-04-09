@@ -7,6 +7,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -18,6 +21,8 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -47,14 +52,14 @@ class TaxControllerTest {
 
     @Test
     void getTaxTracking_delegatesToService() {
-        when(taxService.getTaxTracking("CLIENT", "Pera", "Peric"))
-                .thenReturn(List.of(new TaxTrackingRowResponse("Pera", "Peric", "CLIENT", new BigDecimal("12.50"))));
+        when(taxService.getTaxTracking(eq("CLIENT"), eq("Pera"), eq("Peric"), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(new TaxTrackingRowResponse("Pera", "Peric", "CLIENT", new BigDecimal("12.50")))));
 
-        ResponseEntity<List<TaxTrackingRowResponse>> response = controller.getTaxTracking("CLIENT", "Pera", "Peric");
+        ResponseEntity<Page<TaxTrackingRowResponse>> response = controller.getTaxTracking("CLIENT", "Pera", "Peric", 0, 10);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).hasSize(1);
-        verify(taxService).getTaxTracking("CLIENT", "Pera", "Peric");
+        assertThat(response.getBody().getContent()).hasSize(1);
+        verify(taxService).getTaxTracking(eq("CLIENT"), eq("Pera"), eq("Peric"), any(Pageable.class));
     }
 
     @Test
@@ -67,11 +72,11 @@ class TaxControllerTest {
         assertThat(runTaxCalculationInternal.getAnnotation(PostMapping.class).value()).containsExactly("/internal/tax/capital-gains/run");
         assertThat(runTaxCalculationInternal.getAnnotation(PreAuthorize.class).value()).isEqualTo("hasRole('SERVICE')");
 
-        Method getAllDebts = TaxController.class.getDeclaredMethod("getAllDebts");
+        Method getAllDebts = TaxController.class.getDeclaredMethod("getAllDebts", int.class, int.class);
         assertThat(getAllDebts.getAnnotation(GetMapping.class).value()).containsExactly("/tax/capital-gains/debts");
         assertThat(getAllDebts.getAnnotation(PreAuthorize.class).value()).isEqualTo("hasRole('SUPERVISOR')");
 
-        Method getTaxTracking = TaxController.class.getDeclaredMethod("getTaxTracking", String.class, String.class, String.class);
+        Method getTaxTracking = TaxController.class.getDeclaredMethod("getTaxTracking", String.class, String.class, String.class, int.class, int.class);
         assertThat(getTaxTracking.getAnnotation(GetMapping.class).value()).containsExactly("/tax/tracking");
         assertThat(getTaxTracking.getAnnotation(PreAuthorize.class).value()).isEqualTo("hasRole('SUPERVISOR')");
     }

@@ -11,6 +11,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -23,6 +26,8 @@ import java.lang.reflect.Method;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -43,13 +48,14 @@ class OrderControllerTest {
     void getOrders_methodExistsAndDelegatesToService() {
         OrderOverviewResponse row = new OrderOverviewResponse();
         row.setOrderId(1L);
-        when(orderCreationService.getOrders(OrderOverviewStatusFilter.ALL)).thenReturn(List.of(row));
+        when(orderCreationService.getOrders(eq(OrderOverviewStatusFilter.ALL), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(row)));
 
-        ResponseEntity<List<OrderOverviewResponse>> response = controller.getOrders(OrderOverviewStatusFilter.ALL);
+        ResponseEntity<Page<OrderOverviewResponse>> response = controller.getOrders(OrderOverviewStatusFilter.ALL, 0, 10);
 
-        assertThat(response.getBody()).hasSize(1);
-        assertThat(response.getBody().getFirst().getOrderId()).isEqualTo(1L);
-        verify(orderCreationService).getOrders(OrderOverviewStatusFilter.ALL);
+        assertThat(response.getBody().getContent()).hasSize(1);
+        assertThat(response.getBody().getContent().getFirst().getOrderId()).isEqualTo(1L);
+        verify(orderCreationService).getOrders(eq(OrderOverviewStatusFilter.ALL), any(Pageable.class));
     }
 
     @Test
@@ -95,7 +101,7 @@ class OrderControllerTest {
     }
 
     private void assertGetMapping(String methodName) throws Exception {
-        Method method = OrderController.class.getDeclaredMethod(methodName, OrderOverviewStatusFilter.class);
+        Method method = OrderController.class.getDeclaredMethod(methodName, OrderOverviewStatusFilter.class, int.class, int.class);
         GetMapping mapping = method.getAnnotation(GetMapping.class);
         assertThat(mapping).isNotNull();
     }
@@ -109,7 +115,7 @@ class OrderControllerTest {
 
     private void assertPreAuthorize(String methodName, String expected, Class<?>... parameterTypes) throws Exception {
         Class<?>[] resolvedParameterTypes = parameterTypes.length == 0
-                ? ("getOrders".equals(methodName) ? new Class<?>[]{OrderOverviewStatusFilter.class} : new Class<?>[]{Jwt.class, Long.class})
+                ? ("getOrders".equals(methodName) ? new Class<?>[]{OrderOverviewStatusFilter.class, int.class, int.class} : new Class<?>[]{Jwt.class, Long.class})
                 : parameterTypes;
         Method method = OrderController.class.getDeclaredMethod(methodName, resolvedParameterTypes);
         PreAuthorize preAuthorize = method.getAnnotation(PreAuthorize.class);

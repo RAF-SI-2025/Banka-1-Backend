@@ -41,6 +41,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -123,7 +127,7 @@ public class OrderCreationServiceImpl implements OrderCreationService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<OrderOverviewResponse> getOrders(OrderOverviewStatusFilter statusFilter) {
+    public Page<OrderOverviewResponse> getOrders(OrderOverviewStatusFilter statusFilter, Pageable pageable) {
         List<Order> orders = statusFilter == null || statusFilter == OrderOverviewStatusFilter.ALL
                 ? orderRepository.findAll().stream()
                 .filter(order -> order.getStatus() != OrderStatus.PENDING_CONFIRMATION)
@@ -151,9 +155,17 @@ public class OrderCreationServiceImpl implements OrderCreationService {
                 .collect(java.util.stream.Collectors.toSet());
         Map<Long, EmployeeDto> employeeCache = new HashMap<>();
 
-        return orders.stream()
+        List<OrderOverviewResponse> all = orders.stream()
                 .map(order -> mapToOverviewResponse(order, listingCache, employeeCache, actuaryUserIds))
                 .toList();
+
+        if (pageable.isUnpaged()) {
+            return new PageImpl<>(all, pageable, all.size());
+        }
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), all.size());
+        List<OrderOverviewResponse> slice = start >= all.size() ? List.of() : all.subList(start, end);
+        return new PageImpl<>(slice, pageable, all.size());
     }
 
     @Override

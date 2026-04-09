@@ -4,7 +4,11 @@ import com.banka1.order.dto.ActuaryAgentDto;
 import com.banka1.order.dto.SetLimitRequestDto;
 import com.banka1.order.service.ActuaryService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -34,13 +38,15 @@ public class ActuaryController {
      */
     @GetMapping("/agents")
     @PreAuthorize("hasRole('SUPERVISOR')")
-    public ResponseEntity<List<ActuaryAgentDto>> getAgents(
+    public ResponseEntity<Page<ActuaryAgentDto>> getAgents(
             @RequestParam(required = false) String email,
             @RequestParam(required = false) String ime,
             @RequestParam(required = false) String prezime,
-            @RequestParam(required = false) String pozicija
+            @RequestParam(required = false) String pozicija,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(100) int size
     ) {
-        return ResponseEntity.ok(actuaryService.getAgents(email, ime, prezime, pozicija));
+        return ResponseEntity.ok(actuaryService.getAgents(email, ime, prezime, pozicija, PageRequest.of(page, size)));
     }
 
     /**

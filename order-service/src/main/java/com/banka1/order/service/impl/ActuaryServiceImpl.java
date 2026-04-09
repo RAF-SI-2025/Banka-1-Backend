@@ -10,6 +10,9 @@ import com.banka1.order.repository.ActuaryInfoRepository;
 import com.banka1.order.service.ActuaryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,7 +39,7 @@ public class ActuaryServiceImpl implements ActuaryService {
      * and merges with local actuary limit data.
      */
     @Override
-    public List<ActuaryAgentDto> getAgents(String email, String ime, String prezime, String pozicija) {
+    public Page<ActuaryAgentDto> getAgents(String email, String ime, String prezime, String pozicija, Pageable pageable) {
         List<ActuaryAgentDto> agents = new java.util.ArrayList<>();
         int pageIndex = 0;
 
@@ -61,7 +64,13 @@ public class ActuaryServiceImpl implements ActuaryService {
             }
         }
 
-        return agents;
+        if (pageable.isUnpaged()) {
+            return new PageImpl<>(agents, pageable, agents.size());
+        }
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), agents.size());
+        List<ActuaryAgentDto> slice = start >= agents.size() ? List.of() : agents.subList(start, end);
+        return new PageImpl<>(slice, pageable, agents.size());
     }
 
     /**

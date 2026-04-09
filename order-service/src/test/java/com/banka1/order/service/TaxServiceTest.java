@@ -35,6 +35,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import org.springframework.data.domain.Pageable;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -455,11 +457,11 @@ class TaxServiceTest {
         lenient().when(orderRepository.findById(11L)).thenReturn(Optional.of(sellOrder));
         when(stockClient.getListing(100L)).thenReturn(stockListing);
 
-        List<TaxDebtResponse> result = taxService.getAllDebts();
+        var result = taxService.getAllDebts(Pageable.unpaged());
 
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).getUserId()).isEqualTo(5L);
-        assertThat(result.get(0).getDebtRsd()).isEqualByComparingTo("37.50");
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getUserId()).isEqualTo(5L);
+        assertThat(result.getContent().get(0).getDebtRsd()).isEqualByComparingTo("37.50");
     }
 
     @Test
@@ -623,18 +625,18 @@ class TaxServiceTest {
         when(clientClient.searchCustomers(null, null, 0, 100)).thenReturn(customerPage);
         when(employeeClient.searchEmployees(null, null, null, null, 0, 100)).thenReturn(employeePage);
 
-        List<TaxTrackingRowResponse> result = taxService.getTaxTracking(null, null, null);
+        var result = taxService.getTaxTracking(null, null, null, Pageable.unpaged());
 
-        assertThat(result).hasSize(2);
-        assertThat(result).extracting(TaxTrackingRowResponse::getUserType).containsExactlyInAnyOrder("CLIENT", "ACTUARY");
-        assertThat(result).filteredOn(row -> "CLIENT".equals(row.getUserType()))
+        assertThat(result.getContent()).hasSize(2);
+        assertThat(result.getContent()).extracting(TaxTrackingRowResponse::getUserType).containsExactlyInAnyOrder("CLIENT", "ACTUARY");
+        assertThat(result.getContent()).filteredOn(row -> "CLIENT".equals(row.getUserType()))
                 .first()
                 .satisfies(row -> {
                     assertThat(row.getFirstName()).isEqualTo("Pera");
                     assertThat(row.getLastName()).isEqualTo("Peric");
                     assertThat(row.getTaxDebtRsd()).isEqualByComparingTo("2925.00");
                 });
-        assertThat(result).filteredOn(row -> "ACTUARY".equals(row.getUserType()))
+        assertThat(result.getContent()).filteredOn(row -> "ACTUARY".equals(row.getUserType()))
                 .first()
                 .satisfies(row -> assertThat(row.getTaxDebtRsd()).isEqualByComparingTo(BigDecimal.ZERO));
         verify(exchangeClient).calculateWithoutCommission("USD", "RSD", new BigDecimal("37.50"));
@@ -659,10 +661,10 @@ class TaxServiceTest {
 
         when(employeeClient.searchEmployees(null, "Ana", "Agentic", null, 0, 100)).thenReturn(employeePage);
 
-        List<TaxTrackingRowResponse> result = taxService.getTaxTracking("ACTUARY", "Ana", "Agentic");
+        var result = taxService.getTaxTracking("ACTUARY", "Ana", "Agentic", Pageable.unpaged());
 
-        assertThat(result).hasSize(1);
-        assertThat(result.getFirst().getUserType()).isEqualTo("ACTUARY");
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().getFirst().getUserType()).isEqualTo("ACTUARY");
         verify(employeeClient).searchEmployees(null, "Ana", "Agentic", null, 0, 100);
         verify(clientClient, never()).searchCustomers(any(), any(), anyInt(), anyInt());
     }
@@ -710,9 +712,9 @@ class TaxServiceTest {
         when(employeeClient.searchEmployees(null, null, null, null, 0, 100)).thenReturn(employees0);
         when(employeeClient.searchEmployees(null, null, null, null, 1, 100)).thenReturn(employees1);
 
-        List<TaxTrackingRowResponse> result = taxService.getTaxTracking(null, null, null);
+        var result = taxService.getTaxTracking(null, null, null, Pageable.unpaged());
 
-        assertThat(result).hasSize(4);
+        assertThat(result.getContent()).hasSize(4);
         verify(clientClient).searchCustomers(null, null, 0, 100);
         verify(clientClient).searchCustomers(null, null, 1, 100);
         verify(employeeClient).searchEmployees(null, null, null, null, 0, 100);
@@ -734,7 +736,7 @@ class TaxServiceTest {
         when(exchangeClient.calculateWithoutCommission("USD", "RSD", new BigDecimal("37.50")))
                 .thenThrow(new RuntimeException("exchange unavailable"));
 
-        assertThatThrownBy(() -> taxService.getTaxTracking(null, null, null))
+        assertThatThrownBy(() -> taxService.getTaxTracking(null, null, null, Pageable.unpaged()))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Failed to convert tax tracking debt to RSD");
 

@@ -6,6 +6,8 @@ import com.banka1.order.dto.CreateSellOrderRequest;
 import com.banka1.order.dto.OrderOverviewResponse;
 import com.banka1.order.dto.OrderResponse;
 import com.banka1.order.entity.enums.OrderOverviewStatusFilter;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -38,7 +40,7 @@ public interface OrderCreationService {
      * @param statusFilter the requested status filter
      * @return overview rows for the portal
      */
-    List<OrderOverviewResponse> getOrders(OrderOverviewStatusFilter statusFilter);
+    Page<OrderOverviewResponse> getOrders(OrderOverviewStatusFilter statusFilter, Pageable pageable);
 
     /**
      * Confirms a draft order and finalizes validation, approval state, and fee transfer.

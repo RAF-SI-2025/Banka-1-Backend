@@ -44,6 +44,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import org.springframework.data.domain.PageRequest;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -644,14 +646,14 @@ class OrderCreationServiceTest {
         employee.setUsername("aagent");
         when(employeeClient.getEmployee(2L)).thenReturn(employee);
 
-        List<OrderOverviewResponse> response = service.getOrders(OrderOverviewStatusFilter.ALL);
+        var response = service.getOrders(OrderOverviewStatusFilter.ALL, PageRequest.of(0, 100));
 
-        assertThat(response).hasSize(2);
-        assertThat(response.get(0).getOrderId()).isEqualTo(10L);
-        assertThat(response.get(0).getAgentName()).isEqualTo("Ana Agent");
-        assertThat(response.get(0).getListingType()).isEqualTo(ListingType.STOCK);
-        assertThat(response.get(0).getRemainingPortions()).isEqualTo(6);
-        assertThat(response.get(1).getAgentName()).isNull();
+        assertThat(response.getContent()).hasSize(2);
+        assertThat(response.getContent().get(0).getOrderId()).isEqualTo(10L);
+        assertThat(response.getContent().get(0).getAgentName()).isEqualTo("Ana Agent");
+        assertThat(response.getContent().get(0).getListingType()).isEqualTo(ListingType.STOCK);
+        assertThat(response.getContent().get(0).getRemainingPortions()).isEqualTo(6);
+        assertThat(response.getContent().get(1).getAgentName()).isNull();
         verify(employeeClient).getEmployee(2L);
         verify(stockClient, times(1)).getListing(42L);
     }
@@ -672,10 +674,10 @@ class OrderCreationServiceTest {
         when(orderRepository.findByStatus(OrderStatus.APPROVED)).thenReturn(List.of(approvedOrder));
         when(actuaryInfoRepository.findByEmployeeIdIn(java.util.Set.of(1L))).thenReturn(List.of());
 
-        List<OrderOverviewResponse> response = service.getOrders(OrderOverviewStatusFilter.APPROVED);
+        var response = service.getOrders(OrderOverviewStatusFilter.APPROVED, PageRequest.of(0, 100));
 
-        assertThat(response).hasSize(1);
-        assertThat(response.getFirst().getStatus()).isEqualTo(OrderStatus.APPROVED);
+        assertThat(response.getContent()).hasSize(1);
+        assertThat(response.getContent().getFirst().getStatus()).isEqualTo(OrderStatus.APPROVED);
     }
 
     @Test
@@ -716,9 +718,9 @@ class OrderCreationServiceTest {
         when(actuaryInfoRepository.findByEmployeeIdIn(java.util.Set.of(2L))).thenReturn(List.of(actuaryInfo));
         when(employeeClient.getEmployee(2L)).thenReturn(employee);
 
-        List<OrderOverviewResponse> response = service.getOrders(OrderOverviewStatusFilter.ALL);
+        var response = service.getOrders(OrderOverviewStatusFilter.ALL, PageRequest.of(0, 100));
 
-        assertThat(response).hasSize(2);
+        assertThat(response.getContent()).hasSize(2);
         verify(stockClient, times(1)).getListing(42L);
         verify(employeeClient, times(1)).getEmployee(2L);
     }
@@ -1001,10 +1003,10 @@ class OrderCreationServiceTest {
         when(orderRepository.findAll()).thenReturn(List.of(draftOrder, pendingOrder));
         when(actuaryInfoRepository.findByEmployeeIdIn(java.util.Set.of(2L))).thenReturn(List.of(actuaryInfo));
 
-        List<OrderOverviewResponse> response = service.getOrders(OrderOverviewStatusFilter.ALL);
+        var response = service.getOrders(OrderOverviewStatusFilter.ALL, PageRequest.of(0, 100));
 
-        assertThat(response).hasSize(1);
-        assertThat(response.getFirst().getOrderId()).isEqualTo(402L);
+        assertThat(response.getContent()).hasSize(1);
+        assertThat(response.getContent().getFirst().getOrderId()).isEqualTo(402L);
     }
 
     @Test

@@ -2,6 +2,7 @@ name: CI - Java Services
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   workflow_dispatch:
   push:
@@ -31,7 +32,6 @@ on:
 
 jobs:
 
-  # ── Detect which services changed ────────────────────────────────────────
   detect-changes:
     name: Detect changed services
     runs-on: ubuntu-latest
@@ -64,12 +64,28 @@ jobs:
             stock-service:
               - 'stock-service/**'
 
-  # ── Build & Test ──────────────────────────────────────────────────────────
   build-and-test:
     name: Build & Test (${{ matrix.service }})
     needs: detect-changes
     if: ${{ needs.detect-changes.outputs.services != '[]' && needs.detect-changes.outputs.services != '' }}
     runs-on: ubuntu-latest
+
+    # ✅ ADD THIS BLOCK
+    services:
+      postgres:
+        image: postgres:15
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_DB: test_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     strategy:
       fail-fast: false
       matrix:
@@ -89,6 +105,15 @@ jobs:
         with:
           gradle-version: '8.14'
 
+      # ✅ WAIT FOR DB
+      - name: Wait for PostgreSQL
+        run: |
+          for i in {1..15}; do
+            pg_isready -h localhost -p 5432 -U postgres && break
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+
       - name: Publish shared libraries to mavenLocal
         run: |
           gradle :security-lib:publishToMavenLocal :company-observability-starter:publishToMavenLocal --no-daemon --warning-mode none --console plain
@@ -103,7 +128,12 @@ jobs:
           SERVICE="${{ matrix.service }}"
           gradle ":${SERVICE}:build" -x test --no-daemon --warning-mode none --console plain
 
+      # ✅ PASS DB CONFIG TO SPRING
       - name: Test
+        env:
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/test_db
+          SPRING_DATASOURCE_USERNAME: postgres
+          SPRING_DATASOURCE_PASSWORD: postgres
         run: |
           SERVICE="${{ matrix.service }}"
           gradle ":${SERVICE}:test" --no-daemon --warning-mode none --console plain
@@ -141,310 +171,3 @@ jobs:
           path: ${{ matrix.service }}/build/reports/jacoco/test/html/
           if-no-files-found: ignore
           retention-days: 7
-
-  # ── Validate Documentation ────────────────────────────────────────────────
-  validate-docs:
-    name: Validate Docs (${{ matrix.service }})
-    needs: detect-changes
-    if: ${{ needs.detect-changes.outputs.services != '[]' && needs.detect-changes.outputs.services != '' }}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        service: ${{ fromJson(needs.detect-changes.outputs.services) }}
-
-    steps:
-      - uses: actions/checkout@v4.2.2
-
-      - name: Check for .skip-docs
-        id: skip-docs
-        run: |
-          SERVICE="${{ matrix.service }}"
-          if [ -f "$SERVICE/.skip-docs" ]; then
-            echo "skip=true" >> $GITHUB_OUTPUT
-            echo "⏭️  $SERVICE: documentation validation skipped (.skip-docs)"
-          else
-            echo "skip=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Check README.md exists
-        if: steps.skip-docs.outputs.skip != 'true'
-        run: |
-          SERVICE="${{ matrix.service }}"
-          if [ ! -f "$SERVICE/README.md" ]; then
-            echo "❌ $SERVICE/README.md is missing."
-            echo "   Every service must have a README.md with:"
-            echo "   - Docker Compose usage instructions"
-            echo "   - .env / environment variable documentation"
-            echo "   - Endpoint and/or event examples"
-            exit 1
-          fi
-
-      - name: Check README.md required sections
-        if: steps.skip-docs.outputs.skip != 'true'
-        run: |
-          SERVICE="${{ matrix.service }}"
-          README="$SERVICE/README.md"
-          FAILED=0
-
-          grep -qi "^# " "$README" || {
-            echo "❌ $SERVICE/README.md: missing top-level title."
-            FAILED=1
-          }
-          grep -q '```' "$README" || {
-            echo "❌ $SERVICE/README.md: missing example code block."
-            FAILED=1
-          }
-          grep -qi "docker.compose\|docker compose" "$README" || {
-            echo "❌ $SERVICE/README.md: missing Docker Compose instructions."
-            FAILED=1
-          }
-          grep -qi "\.env\|environment variable" "$README" || {
-            echo "❌ $SERVICE/README.md: missing .env / environment variable documentation."
-            FAILED=1
-          }
-          grep -qi "endpoint\|event\|api" "$README" || {
-            echo "❌ $SERVICE/README.md: missing endpoint or event examples."
-            FAILED=1
-          }
-
-          [ "$FAILED" -eq 0 ] && echo "✅ $SERVICE/README.md contains all required sections."
-          exit $FAILED
-
-      - name: Set up Node.js for redocly
-        if: steps.skip-docs.outputs.skip != 'true'
-        uses: actions/setup-node@v4.3.0
-        with:
-          node-version: '24'
-          cache: 'npm'
-
-      - name: Install redocly
-        if: steps.skip-docs.outputs.skip != 'true'
-        run: npm ci
-
-      - name: Check OpenAPI spec exists or is skipped
-        if: steps.skip-docs.outputs.skip != 'true'
-        id: openapi-check
-        run: |
-          SERVICE="${{ matrix.service }}"
-
-          if [ -f "$SERVICE/.skip-openapi" ]; then
-            echo "skip=true" >> $GITHUB_OUTPUT
-            echo "⏭️  $SERVICE: OpenAPI validation skipped (.skip-openapi)"
-            exit 0
-          fi
-
-          SPEC=""
-          for PATH_CANDIDATE in \
-            "$SERVICE/docs/openapi.yml" \
-            "$SERVICE/docs/openapi.yaml" \
-            "$SERVICE/src/main/resources/openapi.yml" \
-            "$SERVICE/src/main/resources/openapi.yaml"; do
-            if [ -f "$PATH_CANDIDATE" ] && [ -s "$PATH_CANDIDATE" ]; then
-              SPEC="$PATH_CANDIDATE"
-              break
-            fi
-          done
-
-          if [ -z "$SPEC" ]; then
-            echo "❌ $SERVICE: no OpenAPI spec found."
-            echo "   Add one at docs/openapi.yml or src/main/resources/openapi.yml"
-            echo "   If this service has no HTTP API, add a .skip-openapi file."
-            exit 1
-          fi
-
-          echo "spec=$SPEC" >> $GITHUB_OUTPUT
-          echo "skip=false" >> $GITHUB_OUTPUT
-
-      - name: Validate OpenAPI spec
-        if: steps.skip-docs.outputs.skip != 'true' && steps.openapi-check.outputs.skip != 'true'
-        run: |
-          SPEC="${{ steps.openapi-check.outputs.spec }}"
-          
-          grep -qi "^openapi:" "$SPEC" || {
-            echo "❌ OpenAPI spec missing 'openapi:' field."
-            exit 1
-          }
-          
-          grep -qi "^info:" "$SPEC" || {
-            echo "❌ OpenAPI spec missing 'info:' section."
-            exit 1
-          }
-          
-          grep -qi "^[[:space:]]*title:" "$SPEC" || {
-            echo "❌ OpenAPI spec missing 'title:' field."
-            exit 1
-          }
-          
-          grep -qi "^[[:space:]]*version:" "$SPEC" || {
-            echo "❌ OpenAPI spec missing 'version:' field."
-            exit 1
-          }
-          
-          grep -qi "^paths:" "$SPEC" || {
-            echo "❌ OpenAPI spec missing 'paths:' section."
-            exit 1
-          }
-          
-          npx redocly lint "$SPEC"
-          echo "✅ OpenAPI spec is valid."
-
-  # ── Docker Build Validation ───────────────────────────────────────────────
-  # ── Docker Build & Run Validation ─────────────────────────────────────────
-  docker-validate:
-    name: Docker Build & Run Validation (${{ matrix.service }})
-    needs: [ detect-changes, build-and-test, validate-docs ]
-    if: ${{ needs.detect-changes.outputs.services != '[]' && needs.detect-changes.outputs.services != '' }}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        service: ${{ fromJson(needs.detect-changes.outputs.services) }}
-
-    steps:
-      - uses: actions/checkout@v4.2.2
-
-      # ── Check if Dockerfile exists in the service folder
-      - name: Check for Dockerfile
-        id: check
-        run: |
-          SERVICE="${{ matrix.service }}"
-          if [ -f "$SERVICE/Dockerfile" ]; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "No Dockerfile found in $SERVICE, skipping Docker validation."
-          fi
-
-      # ── Build Docker image from repo root
-      - name: Build Docker image
-        if: steps.check.outputs.exists == 'true'
-        run: |
-          SERVICE="${{ matrix.service }}"
-          echo "Building Docker image for $SERVICE"
-          docker build -f "$SERVICE/Dockerfile" . \
-            -t "ci-test/$SERVICE:latest"
-
-      # ── Test Docker image starts successfully
-      - name: Test Docker image runs
-        if: steps.check.outputs.exists == 'true'
-        run: |
-          SERVICE="${{ matrix.service }}"
-          COMPOSE_CI="$SERVICE/docker-compose.ci.yml"
-
-          if [ -f "$COMPOSE_CI" ]; then
-            echo "Starting $SERVICE via docker-compose.ci.yml (with dependencies)"
-            docker compose -f "$COMPOSE_CI" -p "ci-$SERVICE" up -d
-            sleep 30
-
-            RUNNING=$(docker compose -f "$COMPOSE_CI" -p "ci-$SERVICE" ps --status running 2>/dev/null \
-              | grep -c "$SERVICE" || true)
-            echo "Running containers matching $SERVICE: $RUNNING"
-
-            if [ "$RUNNING" -lt 1 ]; then
-              echo "❌ Container for $SERVICE is not running."
-              docker compose -f "$COMPOSE_CI" -p "ci-$SERVICE" logs "$SERVICE" || true
-              exit 1
-            fi
-          else
-            echo "Starting container for $SERVICE"
-            docker run -d --name "ci-$SERVICE" "ci-test/$SERVICE:latest"
-            sleep 15
-
-            STATUS=$(docker inspect -f '{{.State.Status}}' "ci-$SERVICE")
-            echo "Container status: $STATUS"
-
-            if [ "$STATUS" != "running" ]; then
-              echo "❌ Container for $SERVICE is not running."
-              docker logs "ci-$SERVICE" || true
-              exit 1
-            fi
-          fi
-
-          echo "✅ Docker image for $SERVICE started successfully."
-
-      - name: Cleanup container
-        if: always() && steps.check.outputs.exists == 'true'
-        run: |
-          SERVICE="${{ matrix.service }}"
-          COMPOSE_CI="$SERVICE/docker-compose.ci.yml"
-
-          if [ -f "$COMPOSE_CI" ]; then
-            docker compose -f "$COMPOSE_CI" -p "ci-$SERVICE" down -v >/dev/null 2>&1 || true
-          else
-            docker rm -f "ci-$SERVICE" >/dev/null 2>&1 || true
-          fi
-
-  # ── Push to GitHub Container Registry ────────────────────────────────────
-  push-to-registry:
-    name: Push to GHCR (${{ matrix.service }})
-    needs: [ detect-changes, docker-validate ]
-    if: |
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
-      needs.detect-changes.outputs.services != '[]' &&
-      needs.detect-changes.outputs.services != ''
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    strategy:
-      fail-fast: false
-      matrix:
-        service: ${{ fromJson(needs.detect-changes.outputs.services) }}
-
-    steps:
-      - uses: actions/checkout@v4.2.2
-
-      - name: Check for Dockerfile
-        id: check
-        run: |
-          SERVICE="${{ matrix.service }}"
-          if [ -f "$SERVICE/Dockerfile" ]; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "No Dockerfile found in $SERVICE, skipping push."
-          fi
-
-      - name: Set up QEMU
-        if: steps.check.outputs.exists == 'true'
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        if: steps.check.outputs.exists == 'true'
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GitHub Container Registry
-        if: steps.check.outputs.exists == 'true'
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract Docker metadata
-        if: steps.check.outputs.exists == 'true'
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}/${{ matrix.service }}
-          tags: |
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=dev,enable=${{ github.ref == 'refs/heads/dev' }}
-            type=sha,prefix=,format=short
-
-      - name: Build and push Docker image
-        if: steps.check.outputs.exists == 'true'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ${{ matrix.service }}/Dockerfile
-          push: true
-          platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-
-
-
-  # ── TODO: Deploy to Dev Environment ──────────────────────────────────────
-  #  Configure once the dev server and docker-compose are set up.

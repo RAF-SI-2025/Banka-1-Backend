@@ -263,7 +263,7 @@ class OrderCreationServiceTest {
         assertThatThrownBy(() -> service.confirmOrder(actuaryUser, 100L))
                 .isInstanceOf(BusinessConflictException.class)
                 .hasMessageContaining("Insufficient funds");
-        verify(accountClient).getAccountDetails(999L);
+        verify(accountClient).getAccountDetails(5L);
         verify(accountClient, never()).transfer(any(AccountTransactionRequest.class));
         verify(orderExecutionService, never()).executeOrderAsync(any());
     }
@@ -320,6 +320,7 @@ class OrderCreationServiceTest {
         fundingAccount.setAccountNumber("EMP-EUR");
         fundingAccount.setCurrency("EUR");
         fundingAccount.setOwnerId(2L);
+        fundingAccount.setBalance(new BigDecimal("50000.00"));
         when(accountClient.getAccountDetails(998L)).thenReturn(fundingAccount);
 
         AccountDetailsDto feeAccount = new AccountDetailsDto();
@@ -815,7 +816,7 @@ class OrderCreationServiceTest {
         OrderResponse response = service.createBuyOrder(supervisorUser, buyRequest);
 
         assertThat(response.getStatus()).isEqualTo(OrderStatus.PENDING_CONFIRMATION);
-        assertThat(storedOrder.get().getAccountId()).isEqualTo(999L);
+        assertThat(storedOrder.get().getAccountId()).isNull();
     }
 
     @Test

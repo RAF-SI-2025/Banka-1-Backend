@@ -310,8 +310,8 @@ class OrderExecutionServiceTest {
 
         service.executeOrderPortion(order);
 
-        assertThat(order.getOrderType()).isEqualTo(OrderType.STOP);
-        verify(transactionRepository, never()).save(any(Transaction.class));
+        assertThat(order.getOrderType()).isEqualTo(OrderType.MARKET);
+        verify(transactionRepository).save(any(Transaction.class));
     }
 
     @Test

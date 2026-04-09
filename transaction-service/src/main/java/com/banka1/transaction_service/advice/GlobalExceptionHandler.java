@@ -17,18 +17,18 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 
 /**
- * Centralizovani hendler gresaka za sve REST kontrolere.
- * Mapira ocekivane i neocekivane izuzetke na standardizovane HTTP odgovore sa {@link ErrorResponseDto} telom.
+ * Global exception handler for all REST controllers.
+ * Maps expected and unexpected exceptions to standardized HTTP responses with {@link ErrorResponseDto} body.
  */
 @RestControllerAdvice
 @Component("transactionServiceGlobalExceptionHandler")
 public class GlobalExceptionHandler {
 
     /**
-     * Obradjuje greske narusavanja ogranicenja baze podataka (npr. duplikat unique kolone).
+     * Handles database constraint violation errors (e.g., duplicate unique column).
      *
-     * @param ex izuzetak nastao pri krsenju integrity ogranicenja
-     * @return HTTP 409 Conflict odgovor sa kodom {@code ERR_CONSTRAINT_VIOLATION}
+     * @param ex exception thrown when integrity constraint is violated
+     * @return HTTP 409 Conflict response with code {@code ERR_CONSTRAINT_VIOLATION}
      */
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponseDto> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
@@ -41,10 +41,10 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Obradjuje greske kada trazeni resurs ne postoji u kolekciji.
+     * Handles errors when the requested resource does not exist in the collection.
      *
-     * @param ex izuzetak nastao pri pristupanju nepostojecem elementu
-     * @return HTTP 404 Not Found odgovor sa kodom {@code ERR_NOT_FOUND}
+     * @param ex exception thrown when accessing a non-existent element
+     * @return HTTP 404 Not Found response with code {@code ERR_NOT_FOUND}
      */
     @ExceptionHandler(NoSuchElementException.class)
     public ResponseEntity<ErrorResponseDto> handleNoSuchElement(NoSuchElementException ex) {
@@ -57,10 +57,10 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Obradjuje greske neispravnih argumenata koji ne prolaze programsku validaciju.
+     * Handles invalid arguments that do not pass program validation.
      *
-     * @param ex izuzetak nastao pri detektovanju neispravnog argumenta
-     * @return HTTP 400 Bad Request odgovor sa kodom {@code ERR_VALIDATION}
+     * @param ex exception thrown when an invalid argument is detected
+     * @return HTTP 400 Bad Request response with code {@code ERR_VALIDATION}
      */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponseDto> handleIllegalArgument(IllegalArgumentException ex) {
@@ -73,10 +73,10 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Obradjuje greske komunikacije sa RabbitMQ brokerom.
+     * Handles communication errors with RabbitMQ broker.
      *
-     * @param ex AMQP izuzetak nastao pri slanju poruke
-     * @return HTTP 500 Internal Server Error odgovor sa kodom {@code ERR_INTERNAL_SERVER}
+     * @param ex AMQP exception thrown when sending a message
+     * @return HTTP 500 Internal Server Error response with code {@code ERR_INTERNAL_SERVER}
      */
     @ExceptionHandler(AmqpException.class)
     public ResponseEntity<ErrorResponseDto> handleRabbitMqException(AmqpException ex) {
@@ -89,10 +89,10 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Obradjuje neocekivane izuzetke i vraca genericki odgovor za internu gresku.
+     * Handles unexpected exceptions and returns a generic internal server error response.
      *
-     * @param ex neocekivani izuzetak
-     * @return HTTP 500 odgovor sa standardizovanim telom greske
+     * @param ex unexpected exception
+     * @return HTTP 500 response with standardized error body
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponseDto> handleUnexpectedException(Exception ex) {
@@ -105,10 +105,10 @@ public class GlobalExceptionHandler {
     }
 
 //    /**
-//     * Obradjuje poznate biznis izuzetke i mapira ih na odgovarajuci HTTP status.
+//     * Handles known business exceptions and maps them to the appropriate HTTP status.
 //     *
-//     * @param ex biznis izuzetak koji sadrzi domen-specifican kod greske
-//     * @return odgovor sa detaljima biznis greske i HTTP statusom iz {@link ErrorCode}
+//     * @param ex business exception containing domain-specific error code
+//     * @return response with business error details and HTTP status from {@link ErrorCode}
 //     */
 //    @ExceptionHandler(BusinessException.class)
 //    public ResponseEntity<ErrorResponseDto> handleBusinessException(BusinessException ex) {
@@ -122,10 +122,10 @@ public class GlobalExceptionHandler {
 //    }
 
     /**
-     * Obradjuje greske validacije DTO zahteva i vraca listu neispravnih polja.
+     * Handles validation errors for DTO requests and returns a list of invalid fields.
      *
-     * @param ex izuzetak nastao pri validaciji ulaznih podataka
-     * @return HTTP 400 odgovor sa mapom validacionih gresaka po poljima
+     * @param ex exception thrown during input data validation
+     * @return HTTP 400 response with a map of validation errors by field
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponseDto> handleValidation(MethodArgumentNotValidException ex) {

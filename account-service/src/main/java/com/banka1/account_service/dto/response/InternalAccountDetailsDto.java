@@ -15,7 +15,9 @@ public record InternalAccountDetailsDto(
         String currency,
         BigDecimal availableBalance,
         String status,
-        String accountType
+        String accountType,
+        String email,
+        String username
 ) {
     public static InternalAccountDetailsDto from(Account account) {
         String accountType = null;
@@ -30,7 +32,9 @@ public record InternalAccountDetailsDto(
                 account.getCurrency() != null ? account.getCurrency().getOznaka().name() : null,
                 account.getRaspolozivoStanje(),
                 account.getStatus() != null ? account.getStatus().name() : null,
-                accountType
+                accountType,
+                account.getEmail(),
+                account.getUsername()
         );
     }
 }

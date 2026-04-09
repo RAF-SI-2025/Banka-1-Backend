@@ -53,6 +53,30 @@ public final class RoutingKeys {
      * Routing key za trajnu deaktivaciju kartice.
      */
     public static final String CARD_DEACTIVATED = "card.deactivated";
+    /**
+     * Routing key za odobren kreditni zahtev.
+     */
+    public static final String CREDIT_APPROVED = "credit.approved";
+    /**
+     * Routing key za odbijen kreditni zahtev.
+     */
+    public static final String CREDIT_DECLINED = "credit.declined";
+    /**
+     * Routing key za neuspesnu naplatu rate kredita.
+     */
+    public static final String CREDIT_INSTALLMENT_FAILED = "credit.installment_failed";
+    /**
+     * Routing key za odobren order.
+     */
+    public static final String ORDER_APPROVED = "order.approved";
+    /**
+     * Routing key za odbijen order.
+     */
+    public static final String ORDER_DECLINED = "order.declined";
+    /**
+     * Routing key za uspesno naplaceni porez.
+     */
+    public static final String TAX_COLLECTED = "tax.collected";
 
     private RoutingKeys() {}
 }

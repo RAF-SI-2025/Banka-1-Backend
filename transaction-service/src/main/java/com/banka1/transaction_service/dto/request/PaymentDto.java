@@ -12,67 +12,38 @@ import lombok.Setter;
 import java.math.BigDecimal;
 
 /**
- * DTO za zahtev izvršavanja finansijske transakcije ili transfera.
- * <p>
- * Koristi se za intra-bank transfere novca između računa, sa
- * mogućnošću konverzije između različitih valuta i nabijanjem komisije.
- * <p>
- * Validacija:
- * <ul>
- *   <li>Oba broja računa moraju biti 19-cifreni</li>
- *   <li>Iznosi (fromAmount i toAmount) moraju biti pozitivni</li>
- *   <li>Komisija mora biti >= 0</li>
- * </ul>
+ * DTO representing payment details.
+ * Used for transferring payment information between layers.
  */
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
 public class PaymentDto {
-    /**
-     * Broj računa sa kojeg se novac prenosi (19 cifara).
-     */
 
+    /** Account number from which the payment is made. */
     private String fromAccountNumber;
 
-    /**
-     * Broj računa na koji se novac prenosi (19 cifara).
-     */
-
+    /** Account number to which the payment is made. */
     private String toAccountNumber;
 
     /**
-     * Iznos koji se prenosi iz izvornog računa u njegovoj valuti.
-     * <p>
-     * Ako su računi u različitim valutama, ovaj iznos se konvertuje
-     * prema toAmount.
+     * Amount involved in the payment.
+     * If the accounts are in different currencies, this amount is converted according to toAmount.
      */
-
     private BigDecimal fromAmount;
 
     /**
-     * Iznos koji se prima na odredišnom računu nakon konverzije (ako je primenjena).
-     * <p>
-     * Ako su računi u istoj valuti, ova vrednost je jednaka fromAmount.
-     * Ako su u različitim valutama, ova vrednost je konvertovana prema
-     * kursnim paritetu.
+     * Amount received on the destination account after conversion (if applied).
+     * If the accounts are in the same currency, this value is equal to fromAmount.
+     * If they are in different currencies, this value is converted according to the exchange rate.
      */
-
     private BigDecimal toAmount;
 
-    /**
-     * Komisija za transakciju. Obično se oduzima od izvornog računa.
-     */
-
+    /** Commission for the transaction. Usually deducted from the source account. */
     private BigDecimal commission;
 
-    /**
-     * ID klijenta koji inicira transfer (opciono, za audit log).
-     */
-
-
-
+    /** ID of the client initiating the transfer (optional, for audit log). */
     private Long clientId;
-
 
 }

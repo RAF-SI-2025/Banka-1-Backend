@@ -11,19 +11,19 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
 /**
- * Spring Security konfiguracija koja registruje bean-ove za JWT dekodiranje
- * i verifikaciju potpisa tokena zasnovanu na deljenoj HMAC tajni.
+ * Configuration class for security-related beans.
+ * Provides beans for authentication and authorization mechanisms.
  */
 @Configuration
 @EnableMethodSecurity
 public class SecurityBeans {
 
     /**
-     * Kreira JWT dekoder zasnovan na deljenoj HMAC tajni.
-     * Koristi se od strane Spring Security OAuth2 Resource Server-a za validaciju dolaznih JWT tokena.
+     * Creates a JWT decoder bean based on a shared HMAC secret.
+     * Used by the Spring Security OAuth2 Resource Server to validate incoming JWT tokens.
      *
-     * @param secret tajna za verifikaciju JWT potpisa ucitana iz konfiguracije
-     * @return konfigurisan JWT dekoder
+     * @param secret the secret for verifying JWT signatures loaded from configuration
+     * @return configured JWT decoder
      */
     @Bean
     public JwtDecoder jwtDecoder(@Value("${jwt.secret}") String secret) {

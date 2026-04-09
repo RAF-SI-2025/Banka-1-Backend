@@ -1,5 +1,7 @@
 package com.banka1.account_service.controller;
 
+import com.banka1.account_service.domain.enums.CurrencyCode;
+import com.banka1.account_service.dto.request.BankPaymentDto;
 import com.banka1.account_service.dto.request.PaymentDto;
 import com.banka1.account_service.dto.response.InfoResponseDto;
 import com.banka1.account_service.dto.response.InternalAccountDetailsDto;
@@ -52,6 +54,23 @@ public class AccountController {
     @PostMapping("/transaction")
     public ResponseEntity<UpdatedBalanceResponseDto> transaction(@AuthenticationPrincipal Jwt jwt, @RequestBody @Valid PaymentDto paymentDto) {
         return new ResponseEntity<>(accountService.transaction(paymentDto),HttpStatus.OK);
+    }
+
+
+    @PostMapping("/transactionFromBank")
+    public ResponseEntity<Void> transactionFromBank(@AuthenticationPrincipal Jwt jwt, @RequestBody @Valid BankPaymentDto bankPaymentDto) {
+        accountService.transactionFromBank(bankPaymentDto);
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @GetMapping("/id/{accountId}/details")
+    public ResponseEntity<InternalAccountDetailsDto> getAccountDetailsById(@AuthenticationPrincipal Jwt jwt, @PathVariable Long accountId) {
+        return new ResponseEntity<>(accountService.getAccountDetails(accountId), HttpStatus.OK);
+    }
+
+    @GetMapping("/bank/{currencyCode}")
+    public ResponseEntity<InternalAccountDetailsDto> getBankAccountDetails(@AuthenticationPrincipal Jwt jwt, @PathVariable CurrencyCode currencyCode) {
+        return new ResponseEntity<>(accountService.getBankAccountDetails(currencyCode), HttpStatus.OK);
     }
 
     /**

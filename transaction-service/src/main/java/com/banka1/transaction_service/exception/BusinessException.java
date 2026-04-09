@@ -3,21 +3,23 @@ package com.banka1.transaction_service.exception;
 import lombok.Getter;
 
 /**
- * Izuzetak koji se baca za ocekivane greske poslovne logike.
- * Nosi strukturiran {@link ErrorCode} koji {@code GlobalExceptionHandler} mapira
- * na odgovarajuci HTTP status i telo odgovora.
+ * Exception thrown for expected business logic errors.
+ * Contains a structured {@link ErrorCode} that the {@code GlobalExceptionHandler} maps
+ * to the appropriate HTTP status and response body.
  */
 @Getter
 public class BusinessException extends RuntimeException {
 
-    /** Strukturiran kod greske koji opisuje tip i ozbiljnost poslovne greske. */
+    /**
+     * Structured error code describing the type and severity of the business error.
+     */
     private final ErrorCode errorCode;
 
     /**
-     * Kreira biznis izuzetak sa pripadajucim kodom greske i detaljnom porukom.
+     * Creates a business exception with the associated error code and detailed message.
      *
-     * @param errorCode standardizovani kod domen-specificke greske
-     * @param detailedMessage detaljna poruka za logovanje i klijentski odgovor
+     * @param errorCode standardized code for domain-specific errors
+     * @param detailedMessage detailed message for logging and client response
      */
     public BusinessException(ErrorCode errorCode, String detailedMessage) {
         super(detailedMessage);

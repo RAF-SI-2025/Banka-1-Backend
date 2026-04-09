@@ -1,207 +1,24 @@
 services:
-  # Postgres for Notification Service
-  postgres_notification:
+  # Single Postgres instance — all services share this container, each with its own database
+  postgres:
     image: postgres:16
-    container_name: postgres_notification_db
+    container_name: banka_postgres
     restart: unless-stopped
     env_file:
       - .env
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-notification_db}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-    ports:
-      - "${POSTGRES_EX_PORT:-5433}:5432"
-    volumes:
-      - postgres-notification-data:/var/lib/postgresql/data
-    networks:
-      - banka-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-notification_db}"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
-  # Postgres for User Service
-  postgres_user:
-    image: postgres:16
-    container_name: postgres_user_db
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      POSTGRES_DB: ${DB_NAME:-banka}
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: postgres
     ports:
-      - "${USER_EX_PORT:-5434}:5432"
+      - "${DB_EX_PORT:-5432}:5432"
     volumes:
-      - postgres-user-data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
     networks:
       - banka-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-banka}"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
-  # Postgres for Client Service
-  postgres_client:
-    image: postgres:16
-    container_name: postgres_client_db
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      POSTGRES_DB: ${CLIENT_SERVICE_DB_NAME:-clientdb}
-      POSTGRES_USER: ${CLIENT_SERVICE_DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${CLIENT_SERVICE_DB_PASSWORD:-postgres}
-    ports:
-      - "${CLIENT_SERVICE_DB_EX_PORT:-5435}:5432"
-    volumes:
-      - postgres-client-data:/var/lib/postgresql/data
-    networks:
-      - banka-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${CLIENT_SERVICE_DB_USER:-postgres} -d ${CLIENT_SERVICE_DB_NAME:-clientdb}"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
-  # Postgres for Account Service
-  postgres_account:
-    image: postgres:16
-    container_name: postgres_account_db
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      POSTGRES_DB: ${ACCOUNT_DB_NAME:-accountdb}
-      POSTGRES_USER: ${ACCOUNT_DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${ACCOUNT_DB_PASSWORD:-postgres}
-    ports:
-      - "${ACCOUNT_DB_EX_PORT:-5436}:5432"
-    volumes:
-      - postgres-account-data:/var/lib/postgresql/data
-    networks:
-      - banka-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${ACCOUNT_DB_USER:-postgres} -d ${ACCOUNT_DB_NAME:-accountdb}"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
-  # Postgres for Card Service
-  postgres_card:
-    image: postgres:16
-    container_name: postgres_card_db
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      POSTGRES_DB: ${CARD_DB_NAME:-card_db}
-      POSTGRES_USER: ${CARD_DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${CARD_DB_PASSWORD:-postgres}
-    ports:
-      - "${CARD_DB_EX_PORT:-5439}:5432"
-    volumes:
-      - postgres-card-data:/var/lib/postgresql/data
-    networks:
-      - banka-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${CARD_DB_USER:-postgres} -d ${CARD_DB_NAME:-card_db}"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
-  # Postgres for Transfer Service
-  postgres_transfer:
-    image: postgres:16
-    container_name: postgres_transfer_db
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      POSTGRES_DB: ${TRANSFER_DB_NAME:-transferdb}
-      POSTGRES_USER: ${TRANSFER_DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${TRANSFER_DB_PASSWORD:-postgres}
-    ports:
-      - "${TRANSFER_DB_EX_PORT:-5437}:5432"
-    volumes:
-      - postgres-transfer-data:/var/lib/postgresql/data
-    networks:
-      - banka-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${TRANSFER_DB_USER:-postgres} -d ${TRANSFER_DB_NAME:-transferdb}"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
-  # Postgres for Exchange Service
-  postgres_exchange:
-    image: postgres:16
-    container_name: postgres_exchange_db
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      POSTGRES_DB: ${EXCHANGE_DB_NAME:-exchange_db}
-      POSTGRES_USER: ${EXCHANGE_DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${EXCHANGE_DB_PASSWORD:-postgres}
-    ports:
-      - "${EXCHANGE_DB_EX_PORT:-5440}:5432"
-    volumes:
-      - postgres-exchange-data:/var/lib/postgresql/data
-    networks:
-      - banka-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${EXCHANGE_DB_USER:-postgres} -d ${EXCHANGE_DB_NAME:-exchange_db}"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
-  # Postgres for Verification Service
-  postgres_verification:
-    image: postgres:16
-    container_name: postgres_verification_db
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      POSTGRES_DB: ${VERIFICATION_DB_NAME:-verificationdb}
-      POSTGRES_USER: ${VERIFICATION_DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${VERIFICATION_DB_PASSWORD:-postgres}
-    ports:
-      - "${VERIFICATION_DB_EX_PORT:-5438}:5432"
-    volumes:
-      - postgres-verification-data:/var/lib/postgresql/data
-    networks:
-      - banka-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${VERIFICATION_DB_USER:-postgres} -d ${VERIFICATION_DB_NAME:-verificationdb}"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
-  # Postgres for Stock Service
-  postgres_stock:
-    image: postgres:16
-    container_name: postgres_stock_db
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      POSTGRES_DB: ${STOCK_DB_NAME:-stock_db}
-      POSTGRES_USER: ${STOCK_DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${STOCK_DB_PASSWORD:-postgres}
-    ports:
-      - "${STOCK_DB_EX_PORT:-5441}:5432"
-    volumes:
-      - postgres-stock-data:/var/lib/postgresql/data
-    networks:
-      - banka-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${STOCK_DB_USER:-postgres} -d ${STOCK_DB_NAME:-stock_db}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -295,6 +112,7 @@ services:
       - exchange-service-logs:/var/log/services/exchange:ro
       - verification-service-logs:/var/log/services/verification:ro
       - transaction-service-logs:/var/log/services/transaction:ro
+      - order-service-logs:/var/log/services/order:ro
     depends_on:
       - loki
     networks:
@@ -333,7 +151,7 @@ services:
       NOTIFICATION_SERVICE_HOST: ${NOTIFICATION_SERVICE_HOST:-0.0.0.0}
       NOTIFICATION_SERVICE_PORT: ${NOTIFICATION_SERVER_PORT:-8006}
       SERVER_PORT: ${NOTIFICATION_SERVER_PORT:-8006}
-      POSTGRES_HOST: ${POSTGRES_HOST:-postgres_notification}
+      POSTGRES_HOST: postgres
       POSTGRES_DB: ${POSTGRES_DB:-notification_db}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
@@ -348,7 +166,7 @@ services:
       OTEL_SERVICE_NAME: notification-service
       LOGGING_FILE_PATH: /var/log/banka
     depends_on:
-      postgres_notification:
+      postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
@@ -379,7 +197,7 @@ services:
     env_file:
       - .env
     environment:
-      DB_HOST: ${DB_HOST:-postgres_user}
+      DB_HOST: postgres
       DB_PORT: ${DB_PORT:-5432}
       DB_NAME: ${DB_NAME:-banka}
       DB_USER: ${DB_USER:-postgres}
@@ -396,7 +214,7 @@ services:
       OTEL_SERVICE_NAME: employeeService
       LOGGING_FILE_PATH: /var/log/banka
     depends_on:
-      postgres_user:
+      postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
@@ -427,7 +245,7 @@ services:
     env_file:
       - .env
     environment:
-      CLIENT_SERVICE_DB_HOST: postgres_client
+      CLIENT_SERVICE_DB_HOST: postgres
       CLIENT_SERVICE_PORT: ${CLIENT_SERVER_PORT:-8083}
       SERVER_PORT: ${CLIENT_SERVER_PORT:-8083}
       RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
@@ -441,7 +259,7 @@ services:
       OTEL_SERVICE_NAME: clientService
       LOGGING_FILE_PATH: /var/log/banka
     depends_on:
-      postgres_client:
+      postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
@@ -472,7 +290,7 @@ services:
     env_file:
       - .env
     environment:
-      ACCOUNT_DB_HOST: ${ACCOUNT_DB_HOST}
+      ACCOUNT_DB_HOST: postgres
       ACCOUNT_DB_PORT: ${ACCOUNT_DB_INTERNAL_PORT}
       ACCOUNT_DB_NAME: ${ACCOUNT_DB_NAME}
       ACCOUNT_DB_USER: ${ACCOUNT_DB_USER}
@@ -501,7 +319,7 @@ services:
       OTEL_SERVICE_NAME: accountService
       LOGGING_FILE_PATH: /var/log/banka
     depends_on:
-      postgres_account:
+      postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
@@ -533,7 +351,7 @@ services:
       - .env
     environment:
       SERVER_PORT: ${TRANSFER_SERVICE_PORT:-8085}
-      DB_HOST: postgres_transfer
+      DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: ${TRANSFER_DB_NAME:-transferdb}
       DB_USER: ${TRANSFER_DB_USER:-postgres}
@@ -564,7 +382,7 @@ services:
       OTEL_SERVICE_NAME: transferService
       LOGGING_FILE_PATH: /var/log/banka
     depends_on:
-      postgres_transfer:
+      postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
@@ -597,7 +415,7 @@ services:
     environment:
       EXCHANGE_SERVICE_HOST: 0.0.0.0
       EXCHANGE_SERVER_PORT: ${EXCHANGE_SERVER_PORT:-8085}
-      EXCHANGE_DB_HOST: postgres_exchange
+      EXCHANGE_DB_HOST: postgres
       EXCHANGE_DB_PORT: 5432
       EXCHANGE_DB_NAME: ${EXCHANGE_DB_NAME:-exchange_db}
       EXCHANGE_DB_USER: ${EXCHANGE_DB_USER:-postgres}
@@ -613,7 +431,7 @@ services:
       OTEL_SERVICE_NAME: exchange-service
       LOGGING_FILE_PATH: /var/log/banka
     depends_on:
-      postgres_exchange:
+      postgres:
         condition: service_healthy
       otel-collector:
         condition: service_started
@@ -644,11 +462,11 @@ services:
     environment:
       TRANSACTION_SERVER_PORT: ${TRANSACTION_SERVER_PORT}
       SERVER_PORT: ${TRANSACTION_SERVER_PORT}
-      ACCOUNT_DB_HOST: ${ACCOUNT_DB_HOST}
-      ACCOUNT_DB_PORT: ${ACCOUNT_DB_INTERNAL_PORT}
-      ACCOUNT_DB_NAME: ${ACCOUNT_DB_NAME}
-      ACCOUNT_DB_USER: ${ACCOUNT_DB_USER}
-      ACCOUNT_DB_PASSWORD: ${ACCOUNT_DB_PASSWORD}
+      TRANSACTION_DB_HOST: postgres
+      TRANSACTION_DB_PORT: ${TRANSACTION_DB_INTERNAL_PORT}
+      TRANSACTION_DB_NAME: ${TRANSACTION_DB_NAME}
+      TRANSACTION_DB_USER: ${TRANSACTION_DB_USER}
+      TRANSACTION_DB_PASSWORD: ${TRANSACTION_DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       SERVICES_USER_URL: ${SERVICES_USER_URL}
       CLIENT_SERVER_PORT: ${CLIENT_SERVER_PORT}
@@ -674,7 +492,7 @@ services:
       OTEL_SERVICE_NAME: transaction-service
       LOGGING_FILE_PATH: /var/log/banka
     depends_on:
-      postgres_account:
+      postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
@@ -712,7 +530,7 @@ services:
       - .env
     environment:
       VERIFICATION_SERVER_PORT: ${VERIFICATION_SERVER_PORT:-8086}
-      VERIFICATION_DB_HOST: postgres_verification
+      VERIFICATION_DB_HOST: postgres
       VERIFICATION_DB_PORT: 5432
       VERIFICATION_DB_NAME: ${VERIFICATION_DB_NAME:-verificationdb}
       VERIFICATION_DB_USER: ${VERIFICATION_DB_USER:-postgres}
@@ -734,7 +552,7 @@ services:
       OTEL_SERVICE_NAME: verificationService
       LOGGING_FILE_PATH: /var/log/banka
     depends_on:
-      postgres_verification:
+      postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
@@ -766,7 +584,7 @@ services:
       - .env
     environment:
       CARD_SERVER_PORT: ${CARD_SERVER_PORT:-8087}
-      CARD_DB_HOST: postgres_card
+      CARD_DB_HOST: postgres
       CARD_DB_PORT: ${CARD_DB_INTERNAL_PORT:-5432}
       CARD_DB_NAME: ${CARD_DB_NAME:-card_db}
       CARD_DB_USER: ${CARD_DB_USER:-postgres}
@@ -780,7 +598,9 @@ services:
       NOTIFICATION_CARD_ROUTING_KEY: ${NOTIFICATION_CARD_ROUTING_KEY:-card.#}
       SERVICES_CLIENT_URL: ${SERVICES_CLIENT_URL:-http://client-service:8083}
       SERVICES_ACCOUNT_URL: ${SERVICES_ACCOUNT_URL:-http://account-service:8084}
-      SERVICES_VERIFICATION_URL: http://verification-service
+
+      SERVICES_VERIFICATION_URL: http://verification-service:${VERIFICATION_SERVER_PORT:-8086}
+
       SERVICE_VERIFICATION_PORT: ${VERIFICATION_SERVER_PORT:-8086}
       CARD_REQUEST_VERIFICATION_EXPIRATION_MINUTES: ${CARD_REQUEST_VERIFICATION_EXPIRATION_MINUTES:-15}
       CARD_CREATION_AUTOMATIC_DEFAULT_LIMIT: ${CARD_CREATION_AUTOMATIC_DEFAULT_LIMIT:-1000000}
@@ -794,70 +614,84 @@ services:
       OTEL_SERVICE_NAME: cardService
       LOGGING_FILE_PATH: /var/log/banka
     depends_on:
-      postgres_card:
+      postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
       otel-collector:
         condition: service_started
     expose:
-      - "${CARD_SERVER_PORT:-8087}"
+      - "${CARD_SERVER_PORT:-8090}"
     networks:
       - banka-network
     volumes:
       - card-service-logs:/var/log/banka
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:${CARD_SERVER_PORT:-8087}/actuator/health/liveness || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:${CARD_SERVER_PORT:-8090}/actuator/health/liveness || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 10
       start_period: 30s
 
-  # Stock Service
-  stock-service:
+  # Order Service
+  order-service:
     build:
       context: ..
-      dockerfile: stock-service/Dockerfile
+      dockerfile: order-service/Dockerfile
       args:
-        SERVER_PORT: ${STOCK_SERVICE_PORT:-8090}
-    container_name: stock-service
+        SERVER_PORT: ${ORDER_SERVER_PORT:-8088}
+    container_name: banka_order_service
     restart: unless-stopped
     env_file:
       - .env
     environment:
-      STOCK_SERVICE_HOST: 0.0.0.0
-      STOCK_SERVICE_PORT: ${STOCK_SERVICE_PORT:-8090}
-      SERVER_PORT: ${STOCK_SERVICE_PORT:-8090}
-      STOCK_DB_HOST: postgres_stock
-      STOCK_DB_PORT: 5432
-      STOCK_DB_NAME: ${STOCK_DB_NAME:-stock_db}
-      STOCK_DB_USER: ${STOCK_DB_USER:-postgres}
-      STOCK_DB_PASSWORD: ${STOCK_DB_PASSWORD:-postgres}
-      STOCK_EXCHANGE_SERVICE_URL: ${STOCK_EXCHANGE_SERVICE_URL:-http://exchange-service:${EXCHANGE_SERVER_PORT:-8085}}
-      STOCK_MARKET_DATA_BASE_URL: ${STOCK_MARKET_DATA_BASE_URL:-https://www.alphavantage.co}
-      ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY:-}
+      ORDER_SERVER_PORT: ${ORDER_SERVER_PORT:-8088}
+      ORDER_DB_HOST: postgres
+      ORDER_DB_PORT: 5432
+      ORDER_DB_NAME: ${ORDER_DB_NAME:-orderdb}
+      ORDER_DB_USER: ${ORDER_DB_USER:-postgres}
+      ORDER_DB_PASSWORD: ${ORDER_DB_PASSWORD:-postgres}
       JWT_SECRET: ${JWT_SECRET}
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-guest}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      NOTIFICATION_QUEUE: ${NOTIFICATION_QUEUE:-notification-service-queue}
+      NOTIFICATION_EXCHANGE: ${NOTIFICATION_EXCHANGE:-employee.events}
+      NOTIFICATION_ROUTING_KEY: ${NOTIFICATION_ROUTING_KEY:-employee.#}
+      ACCOUNT_SERVICE_HOST: account-service
+      ACCOUNT_SERVER_PORT: ${ACCOUNT_SERVER_PORT:-8084}
+      EMPLOYEE_SERVICE_HOST: employee-service
+      USER_SERVER_PORT: ${USER_SERVER_PORT:-8081}
+      CLIENT_SERVICE_HOST: client-service
+      CLIENT_SERVER_PORT: ${CLIENT_SERVER_PORT:-8083}
+      EXCHANGE_SERVICE_HOST: exchange-service
+      EXCHANGE_SERVER_PORT: ${EXCHANGE_SERVER_PORT:-8085}
+      STOCK_SERVICE_HOST: stock-service
+      STOCK_SERVICE_PORT: ${STOCK_SERVICE_PORT:-8090}
       MANAGEMENT_OTLP_METRICS_EXPORT_URL: http://otel-collector:4318/v1/metrics
       MANAGEMENT_OTLP_TRACING_ENDPOINT: http://otel-collector:4318/v1/traces
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
       OTEL_TRACES_EXPORTER: otlp
       OTEL_METRICS_EXPORTER: none
       OTEL_LOGS_EXPORTER: none
-      OTEL_SERVICE_NAME: stock-service
+      OTEL_SERVICE_NAME: order-service
       LOGGING_FILE_PATH: /var/log/banka
     depends_on:
-      postgres_stock:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
       otel-collector:
         condition: service_started
     expose:
-      - "${STOCK_SERVICE_PORT:-8090}"
+      - "${ORDER_SERVER_PORT:-8088}"
     networks:
       - banka-network
     volumes:
-      - stock-service-logs:/var/log/banka
+      - order-service-logs:/var/log/banka
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:${STOCK_SERVICE_PORT:-8090}/actuator/health/liveness || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:${ORDER_SERVER_PORT:-8088}/actuator/health/liveness || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 10
@@ -882,7 +716,7 @@ services:
       VERIFICATION_SERVER_PORT: ${VERIFICATION_SERVER_PORT:-8086}
       TRANSACTION_SERVER_PORT: ${TRANSACTION_SERVER_PORT:-8087}
       CARD_SERVICE_PORT: ${CARD_SERVER_PORT:-8087}
-      STOCK_SERVICE_PORT: ${STOCK_SERVICE_PORT:-8090}
+      ORDER_SERVER_PORT: ${ORDER_SERVER_PORT:-8088}
     depends_on:
       employee-service:
         condition: service_healthy
@@ -898,7 +732,7 @@ services:
         condition: service_healthy
       transaction-service:
         condition: service_healthy
-      stock-service:
+      order-service:
         condition: service_healthy
     networks:
       - banka-network
@@ -914,15 +748,7 @@ networks:
     driver: bridge
 
 volumes:
-  postgres-notification-data:
-  postgres-user-data:
-  postgres-client-data:
-  postgres-account-data:
-  postgres-card-data:
-  postgres-transfer-data:
-  postgres-exchange-data:
-  postgres-verification-data:
-  postgres-stock-data:
+  postgres-data:
   grafana-data:
   loki-data:
   notification-service-logs:
@@ -934,5 +760,5 @@ volumes:
   exchange-service-logs:
   verification-service-logs:
   transaction-service-logs:
-  stock-service-logs:
+  order-service-logs:
 

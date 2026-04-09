@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.17.xsd">
+
+    <include file="db/changelog/001-actuary-schema.sql"/>
+    <include file="db/changelog/002-order-schema.sql"/>
+    <include file="db/changelog/003-transaction-schema.sql"/>
+    <include file="db/changelog/004-portfolio-schema.sql"/>
+    <include file="db/changelog/005-tax-charge-schema.sql"/>
+    <include file="db/changelog/006-order-reservations.sql"/>
+    <include file="db/changelog/007-portfolio-reservations.sql"/>
+</databaseChangeLog>

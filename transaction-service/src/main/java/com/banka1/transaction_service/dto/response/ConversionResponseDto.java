@@ -4,19 +4,17 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
- * DTO odgovora za endpoint kalkulacije ekvivalencije.
- * Struktura je prilagodjena specifikaciji zadatka i predstavlja javni API
- * kontrakt koji klijent dobija kao JSON odgovor.
+ * DTO representing the result of a currency conversion.
+ * Contains details about the conversion process and the resulting amounts.
  *
- * @param fromCurrency izvorna valuta
- * @param toCurrency ciljna valuta
- * @param fromAmount originalni iznos iz zahteva
- * @param toAmount preracunati iznos u ciljnoj valuti
- * @param rate efektivni kurs konverzije, tj. odnos {@code toAmount/fromAmount}
- * @param commission obracunata provizija u izvornoj valuti
- * @param date datum kursne liste koji je koriscen u obracunu
+ * @param fromCurrency Source currency code.
+ * @param toCurrency Target currency code.
+ * @param fromAmount Amount in the source currency.
+ * @param toAmount Amount in the target currency.
+ * @param rate Conversion rate applied.
+ * @param commission Calculated commission in the source currency.
+ * @param date Date of the conversion.
  */
-
 public record ConversionResponseDto(
         String fromCurrency,
         String toCurrency,

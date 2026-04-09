@@ -1,16 +1,16 @@
 package com.banka1.transaction_service.domain.enums;
 
 /**
- * Enumeracija koja predstavlja moguće stanja sesije verifikacije.
- * Prati životni ciklus od kreiranja do završetka ili neuspjeha.
+ * Enum representing possible states of the verification session.
+ * Tracks the lifecycle from creation to completion or failure.
  */
 public enum VerificationStatus {
-    /** Sesija kreirana i čeka validaciju koda. */
+    /** Session created and waiting for code validation. */
     PENDING,
-    /** Kod uspješno validiran i sesija završena. */
+    /** Code successfully validated and session completed. */
     VERIFIED,
-    /** Sesija istekla zbog vremenskog ograničenja (5 minuta). */
+    /** Session expired due to time limit (5 minutes). */
     EXPIRED,
-    /** Sesija otkazana zbog previše neuspjelih pokušaja (3+). */
+    /** Session cancelled due to too many failed attempts (3+). */
     CANCELLED
 }

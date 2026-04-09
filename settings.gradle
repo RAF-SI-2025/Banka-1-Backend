@@ -15,4 +15,7 @@ include 'transfer-service'
 include 'exchange-service'
 include 'verification-service'
 include 'transaction-service'
+include 'order-service'
+
+
 include 'stock-service'

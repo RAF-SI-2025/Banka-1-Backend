@@ -114,6 +114,63 @@ public class RabbitConfig {
     }
 
     /**
+     * Binds the notification queue to the exchange for credit events.
+     *
+     * @param notificationServiceQueue queue bean
+     * @param employeeEventsExchange exchange bean
+     * @param creditRoutingKey routing-key pattern from configuration
+     * @return exchange-to-queue binding for credit routing keys
+     */
+    @Bean
+    public Binding creditNotificationBinding(
+            Queue notificationServiceQueue,
+            TopicExchange employeeEventsExchange,
+            @Value("${notification.rabbit.credit-routing-key}") String creditRoutingKey
+    ) {
+        return BindingBuilder.bind(notificationServiceQueue)
+                .to(employeeEventsExchange)
+                .with(creditRoutingKey);
+    }
+
+    /**
+     * Binds the notification queue to the exchange for order events.
+     *
+     * @param notificationServiceQueue queue bean
+     * @param employeeEventsExchange exchange bean
+     * @param orderRoutingKey routing-key pattern from configuration
+     * @return exchange-to-queue binding for order routing keys
+     */
+    @Bean
+    public Binding orderNotificationBinding(
+            Queue notificationServiceQueue,
+            TopicExchange employeeEventsExchange,
+            @Value("${notification.rabbit.order-routing-key}") String orderRoutingKey
+    ) {
+        return BindingBuilder.bind(notificationServiceQueue)
+                .to(employeeEventsExchange)
+                .with(orderRoutingKey);
+    }
+
+    /**
+     * Binds the notification queue to the exchange for tax events.
+     *
+     * @param notificationServiceQueue queue bean
+     * @param employeeEventsExchange exchange bean
+     * @param taxRoutingKey routing-key pattern from configuration
+     * @return exchange-to-queue binding for tax routing keys
+     */
+    @Bean
+    public Binding taxNotificationBinding(
+            Queue notificationServiceQueue,
+            TopicExchange employeeEventsExchange,
+            @Value("${notification.rabbit.tax-routing-key}") String taxRoutingKey
+    ) {
+        return BindingBuilder.bind(notificationServiceQueue)
+                .to(employeeEventsExchange)
+                .with(taxRoutingKey);
+    }
+
+    /**
      * Converts RabbitMQ JSON payloads ==> to/from ==> Java objects.
      *
      * @return Jackson-based message converter

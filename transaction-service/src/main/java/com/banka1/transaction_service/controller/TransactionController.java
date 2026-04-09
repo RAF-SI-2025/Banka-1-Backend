@@ -29,12 +29,23 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 
+/**
+ * REST controller for managing transactions.
+ * Provides endpoints for creating, retrieving, and searching transactions.
+ */
 @RestController
 @AllArgsConstructor
 //@PreAuthorize("hasRole('CLIENT_BASIC')")
-
 public class TransactionController {
     private TransactionService transactionService;
+
+    /**
+     * Creates a new transaction.
+     *
+     * @param jwt JWT token of the authenticated user
+     * @param newPaymentDto the details of the new payment
+     * @return the response containing the status and message of the created payment
+     */
     @Operation(summary = "Create a new payment")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Payment created",
@@ -57,7 +68,15 @@ public class TransactionController {
 
 
 
-
+    /**
+     * Retrieves all transactions for a specific account.
+     *
+     * @param jwt JWT token of the authenticated user
+     * @param accountNumber the account number to retrieve transactions for
+     * @param page page number (starting from 0)
+     * @param size number of items per page
+     * @return a paginated list of transactions
+     */
     @Operation(summary = "Get account transactions")
     @ApiResponses({
             @ApiResponse(responseCode = "401", description = "Unauthorized",
@@ -77,7 +96,22 @@ public class TransactionController {
 
         return new ResponseEntity<>(transactionService.findAllTransactions(jwt,accountNumber,page,size), HttpStatus.OK);
     }
-
+    /**
+     * Searches for transactions based on various criteria.
+     *
+     * @param jwt JWT token of the authenticated user
+     * @param accountNumber account number to filter (optional)
+     * @param status transaction status as a string (optional, converts to enum)
+     * @param fromDate start date for the period (optional)
+     * @param toDate end date for the period (optional)
+     * @param initialAmountMin minimum initial amount (optional)
+     * @param initialAmountMax maximum initial amount (optional)
+     * @param finalAmountMin minimum final amount (optional)
+     * @param finalAmountMax maximum final amount (optional)
+     * @param page page number
+     * @param size number of items per page
+     * @return a paginated list of transactions matching the criteria
+     */
     @GetMapping("/api/payments")
     //todo proveriti da li uospte treba za BASIC(EMPLOYEE_BASIC)
     @PreAuthorize("hasAnyRole('CLIENT_BASIC','BASIC')")

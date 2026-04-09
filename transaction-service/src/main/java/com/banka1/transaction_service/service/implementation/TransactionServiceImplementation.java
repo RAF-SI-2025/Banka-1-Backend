@@ -40,6 +40,12 @@ import java.time.LocalDateTime;
 import java.util.Locale;
 import java.util.NoSuchElementException;
 
+/**
+ * Implementation of the service for managing transactions.
+ * <p>
+ * This class contains the complete business logic for creating, searching, and filtering transactions (payments),
+ * including validations, communication with external services, and database operations.
+ */
 @RequiredArgsConstructor
 @Getter
 @Setter
@@ -60,9 +66,23 @@ public class TransactionServiceImplementation implements TransactionService {
     private final TransactionServiceInternal transactionServiceInternal;
     private final PaymentRepository paymentRepository;
 
-
-
-//    @Transactional
+    /**
+     * Creates a new transaction (payment) with complete business logic.
+     * <p>
+     * Process:
+     * <ul>
+     *   <li>Checks client verification (if enabled)</li>
+     *   <li>Finds accounts and validates them</li>
+     *   <li>Calculates currency conversion</li>
+     *   <li>Creates Payment entity in the database</li>
+     *   <li>Attempts to execute the transfer up to 3 times with retry logic</li>
+     *   <li>Updates status and sends email notification</li>
+     * </ul>
+     *
+     * @param jwt JWT token of the authenticated user
+     * @param newPaymentDto DTO with new payment details
+     * @return response with payment status and message
+     */
     @Override
     public NewPaymentResponseDto newPayment(Jwt jwt, NewPaymentDto newPaymentDto) {
         if (!skipVerification) {
@@ -110,6 +130,13 @@ public class TransactionServiceImplementation implements TransactionService {
         return new NewPaymentResponseDto("Payment nije bio uspesan", transactionStatus.name());
     }
 
+    /**
+     * Checks if the HTTP error is due to a non-existent account.
+     * Used to distinguish errors from the Account service.
+     *
+     * @param ex HTTP error from the Account service
+     * @return true if the error is "account does not exist", false otherwise
+     */
     private boolean isMissingAccountError(HttpClientErrorException ex) {
         if (HttpStatus.NOT_FOUND.equals(ex.getStatusCode())) {
             return true;
@@ -128,20 +155,49 @@ public class TransactionServiceImplementation implements TransactionService {
         return normalized.contains("ne postoji") && normalized.contains("racun");
     }
 
+    /**
+     * Retrieves all transactions for a specific client account with authentication.
+     * <p>
+     * Only the account owner can access this method.
+     *
+     * @param jwt JWT token of the authenticated user
+     * @param accountNumber account number
+     * @param page page number
+     * @param size number of items per page
+     * @return paginated list of transactions for the given account
+     */
     @Transactional
     @Override
     public Page<TransactionResponseDto> findAllTransactions(Jwt jwt, String accountNumber, int page, int size) {
-        AccountDetailsResponseDto accountDetailsResponseDto=accountService.getDetails(accountNumber);
-        if(accountDetailsResponseDto == null)
-            throw new IllegalStateException("Sistemska greska");
-        if(accountDetailsResponseDto.getVlasnik()==null || !accountDetailsResponseDto.getVlasnik().equals(((Number) jwt.getClaim(appPropertiesId)).longValue()))
-            throw new IllegalArgumentException("Nisi vlasnik racuna");
+        if(jwt.getClaimAsString(roles).equalsIgnoreCase("CLIENT_BASIC")) {
+            AccountDetailsResponseDto accountDetailsResponseDto = accountService.getDetails(accountNumber);
+            if (accountDetailsResponseDto == null)
+                throw new IllegalStateException("Sistemska greska");
+            if (accountDetailsResponseDto.getVlasnik() == null || !accountDetailsResponseDto.getVlasnik().equals(((Number) jwt.getClaim(appPropertiesId)).longValue()))
+                throw new IllegalArgumentException("Nisi vlasnik racuna");
+        }
         return paymentRepository.findByAccountNumber(accountNumber, PageRequest.of(page,size)).map(TransactionResponseDto::new);
     }
 
+    /**
+     * Retrieves transactions with advanced filtering - available only to employees and owners.
+     *
+     * @param jwt JWT token
+     * @param accountNumber account number (optional)
+     * @param transactionStatus transaction status (optional)
+     * @param fromDate start date (optional)
+     * @param toDate end date (optional)
+     * @param initialAmountMin minimum initial amount (optional)
+     * @param initialAmountMax maximum initial amount (optional)
+     * @param finalAmountMin minimum final amount (optional)
+     * @param finalAmountMax maximum final amount (optional)
+     * @param page page number
+     * @param size number of items per page
+     * @return filtered and paginated list of transactions
+     */
     @Override
     public Page<TransactionResponseDto> findPayments(Jwt jwt, String accountNumber, TransactionStatus transactionStatus, LocalDateTime fromDate, LocalDateTime toDate, BigDecimal initialAmountMin, BigDecimal initialAmountMax, BigDecimal finalAmountMin, BigDecimal finalAmountMax, int page, int size) {
-        if(!jwt.getClaimAsString(roles).equalsIgnoreCase("ADMIN"))
+        if(jwt.getClaimAsString(roles).equalsIgnoreCase("CLIENT_BASIC"))
         {
         AccountDetailsResponseDto accountDetailsResponseDto=accountService.getDetails(accountNumber);
         if(accountDetailsResponseDto == null)
@@ -193,7 +249,14 @@ public class TransactionServiceImplementation implements TransactionService {
                 .map(TransactionResponseDto::new);
     }
 
-
+    /**
+     * Retrieves all transactions for a specific account - employee access without owner restrictions.
+     *
+     * @param accountNumber account number
+     * @param page page number
+     * @param size number of items per page
+     * @return paginated list of transactions
+     */
     @Transactional
     @Override
     public Page<TransactionResponseDto> findAllTransactionsForEmployee(String accountNumber, int page, int size) {
@@ -201,8 +264,8 @@ public class TransactionServiceImplementation implements TransactionService {
                 .map(TransactionResponseDto::new);
     }
 
-    //todo za sad ovo ostavljam ovde, validacije bi trebalo da budu zaseban servis, if-ove sam ostavio just in case
-    //TODO menjati exceptione
+    //todo for now leaving this here, validations should be a separate service, left ifs just in case
+    //TODO change exceptions
 
 //    private void  validation(AccountDto account,Jwt jwt)
 //    {
@@ -211,9 +274,5 @@ public class TransactionServiceImplementation implements TransactionService {
 //        if(!account.getVlasnik().equals(((Number) jwt.getClaim(appPropertiesId)).longValue()))
 //            throw new IllegalArgumentException("Nisi vlasnik racuna");
 //    }
-
-
-
-
 
 }

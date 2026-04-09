@@ -12,9 +12,9 @@ import java.time.LocalDateTime;
 
 
 /**
- * Bazni JPA entitet koji sadrzi zajednicka polja za entitete u aplikaciji.
- * Pruza automatsko upravljanje primarnim kljucem, verzijom za optimisticko zakljucavanje,
- * zastavom za soft delete i vremenskim markama kreiranja i azuriranja.
+ * Base JPA entity containing common fields for entities in the application.
+ * Provides automatic management of primary key, optimistic locking version,
+ * and creation and update timestamps.
  */
 
 @MappedSuperclass
@@ -23,22 +23,22 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 public class BaseEntityWithoutDelete {
-    /** Primarni kljuc entiteta, automatski generisan. */
+    /** Primary key of the entity, automatically generated. */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** Verzija za optimisticko zakljucavanje – Hibernate automatski povecava vrednost pri svakom azuriranju. */
+    /** Optimistic locking version – Hibernate automatically increments the value on each update. */
     @Version
     private Long version;
 
 
-    /** Vreme kreiranja entiteta – postavljeno automatski i ne moze se menjati. */
+    /** Creation timestamp of the entity – set automatically and cannot be changed. */
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    /** Vreme poslednjeg azuriranja entiteta – automatski se osvezava pri svakoj izmeni. */
+    /** Last update timestamp of the entity – automatically refreshed on each modification. */
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;

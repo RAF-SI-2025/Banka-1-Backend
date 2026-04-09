@@ -66,9 +66,9 @@ class RateLimitFilterTest {
             MockHttpServletRequest req = new MockHttpServletRequest("POST", "/customers");
             req.setServletPath("/customers");
             req.setRemoteAddr("192.168.1." + i);
-            MockHttpServletResponse resp = new MockHttpServletResponse();
-            filter.doFilter(req, resp, new MockFilterChain());
-            assertThat(resp.getStatus()).isNotEqualTo(429);
+            MockHttpServletResponse response = new MockHttpServletResponse();
+            filter.doFilter(req, response, new MockFilterChain());
+            assertThat(response.getStatus()).isNotEqualTo(429);
         }
     }
 

@@ -14,44 +14,44 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Spring konfiguracija RabbitMQ infrastrukture.
- * Definiše queue, direct exchange, binding i JSON konverter za serijalizaciju poruka.
+ * Configuration class for RabbitMQ.
+ * Defines beans for RabbitMQ queues, exchanges, and bindings.
  */
 @Configuration
 public class RabbitConfig {
 
-    /** Naziv RabbitMQ queue-a na koji stizu email poruke. */
+    /** Name of the RabbitMQ queue for email messages. */
     @Value("${rabbitmq.queue}")
     private String queueName;
 
-    /** Naziv direct exchange-a na koji se poruke objavljuju. */
+    /** Name of the direct exchange for publishing messages. */
     @Value("${rabbitmq.exchange}")
     private String exchangeName;
 
-    /** Routing kljuc koji vezuje exchange za queue. */
+    /** Routing key binding the exchange to the queue. */
     @Value("${rabbitmq.routing-key}")
     private String routingKey;
 
-    /** Hostname RabbitMQ servera. */
+    /** Hostname of the RabbitMQ server. */
     @Value("${spring.rabbitmq.host}")
     private String rabbitHost;
 
-    /** Port RabbitMQ servera. */
+    /** Port of the RabbitMQ server. */
     @Value("${spring.rabbitmq.port}")
     private int rabbitPort;
 
-    /** Korisnicko ime za autentifikaciju na RabbitMQ serveru. */
+    /** Username for authenticating with the RabbitMQ server. */
     @Value("${spring.rabbitmq.username}")
     private String rabbitUsername;
 
-    /** Lozinka za autentifikaciju na RabbitMQ serveru. */
+    /** Password for authenticating with the RabbitMQ server. */
     @Value("${spring.rabbitmq.password}")
     private String rabbitPassword;
 
     /**
-     * Kreira RabbitMQ connection factory na osnovu vrednosti iz konfiguracije.
+     * Creates a RabbitMQ connection factory using configuration values.
      *
-     * @return konekcioni factory za komunikaciju sa RabbitMQ serverom
+     * @return the connection factory for communicating with RabbitMQ
      */
     @Bean
     public ConnectionFactory connectionFactory() {
@@ -63,11 +63,11 @@ public class RabbitConfig {
     }
 
     /**
-     * Kreira RabbitTemplate i povezuje JSON konverter poruka.
+     * Creates a RabbitTemplate and sets the JSON message converter.
      *
-     * @param connectionFactory factory za otvaranje RabbitMQ konekcija
-     * @param jacksonMessageConverter konverter objekata u JSON poruke
-     * @return konfigurisan RabbitTemplate
+     * @param connectionFactory the factory for opening RabbitMQ connections
+     * @param jacksonMessageConverter the converter for objects to JSON messages
+     * @return the configured RabbitTemplate
      */
     @Bean
     public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory, MessageConverter jacksonMessageConverter) {
@@ -77,9 +77,9 @@ public class RabbitConfig {
     }
 
     /**
-     * Registruje Jackson konverter za serijalizaciju RabbitMQ poruka u JSON format.
+     * Registers a Jackson converter for serializing RabbitMQ messages to JSON format.
      *
-     * @return JSON message converter
+     * @return the JSON message converter
      */
     @Bean
     public MessageConverter jacksonMessageConverter() {
@@ -87,9 +87,9 @@ public class RabbitConfig {
     }
 
     /**
-     * Kreira trajni RabbitMQ queue sa konfigurisanim nazivom.
+     * Creates a RabbitMQ queue.
      *
-     * @return deklarisani durable queue
+     * @return the configured queue
      */
     @Bean
     public Queue queue() {
@@ -97,9 +97,9 @@ public class RabbitConfig {
     }
 
     /**
-     * Kreira topic exchange za rutiranje notifikacija.
+     * Creates a RabbitMQ direct exchange.
      *
-     * @return deklarisani topic exchange
+     * @return the configured direct exchange
      */
     @Bean
     public TopicExchange topicExchange() {
@@ -107,11 +107,11 @@ public class RabbitConfig {
     }
 
     /**
-     * Povezuje queue i exchange preko konfigurisanog routing kljuca.
+     * Binds a queue to an exchange with a routing key.
      *
-     * @param queue queue koji prima poruke
-     * @param topicExchange exchange preko kog se poruke rutiraju
-     * @return deklarisani binding
+     * @param queue queue that receives messages
+     * @param topicExchange exchange through which messages are routed
+     * @return declared binding
      */
     @Bean
     public Binding binding(Queue queue, TopicExchange topicExchange) {

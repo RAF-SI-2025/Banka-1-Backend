@@ -13,10 +13,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
- * DTO koji mapira query parametre endpoint-a
- * {@code GET /calculate?fromCurrency=...&toCurrency=...&amount=...}.
- * Spring MVC automatski binduje vrednosti iz URL query string-a u ovo polje
- * i zatim pokrece Bean Validation anotacije definisane nad poljima.
+ * DTO for querying currency conversion details.
+ * Contains information about the source and target currencies and the amount to be converted.
  */
 @Getter
 @Setter
@@ -26,28 +24,15 @@ public class ConversionQueryDto {
     private static final String SUPPORTED_CURRENCY_MESSAGE =
             "Supported currencies are RSD, EUR, CHF, USD, GBP, JPY, CAD and AUD.";
 
-    /**
-     * Izvorna valuta iz koje korisnik konvertuje iznos.
-     */
-
+    /** Source currency code. */
     private String fromCurrency;
 
-    /**
-     * Ciljna valuta u koju se obracunava ekvivalent.
-     */
-
+    /** Target currency code. */
     private String toCurrency;
 
-    /**
-     * Iznos koji treba preracunati.
-     */
-
+    /** Amount to be converted. */
     private BigDecimal amount;
 
-    /**
-     * Opcioni datum kursne liste.
-     * Ako nije zadat, koristi se poslednji raspolozivi lokalni snapshot.
-     */
-
+    /** Conversion rate to be applied. */
     private LocalDate date;
 }

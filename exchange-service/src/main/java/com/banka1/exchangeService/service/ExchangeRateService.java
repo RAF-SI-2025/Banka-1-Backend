@@ -50,4 +50,13 @@ public interface ExchangeRateService {
      * @return conversion result with output amount, effective rate, and commission
      */
     ConversionResponseDto convert(ConversionRequestDto request);
+
+    /**
+     * Converts an amount from one currency to another without applying commission.
+     * Intended for internal settlement and tax flows that must stay commission-free.
+     *
+     * @param request conversion request containing source/target currencies and amount
+     * @return conversion result with zero commission
+     */
+    ConversionResponseDto convertWithoutCommission(ConversionRequestDto request);
 }

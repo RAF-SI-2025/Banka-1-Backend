@@ -57,4 +57,27 @@ class NotificationMessageListenerUnitTest {
 
         verify(notificationDeliveryService).handleIncomingMessage(null, "employee.created");
     }
+
+    /**
+     * Verifies that newly introduced credit/order/tax routing keys are forwarded unchanged.
+     *
+     * <p>This protects the listener from adding any special-case filtering for the new
+     * ISSUE #39 event families.
+     */
+    @Test
+    void receiveMessageDelegatesNewRoutingKeysToDeliveryService() {
+        NotificationRequest request = new NotificationRequest(
+                "Dimitrije",
+                "dimitrije.tomic99@gmail.com",
+                Map.of("name", "Dimitrije", "creditId", "42")
+        );
+
+        notificationMessageListener.receiveMessage(request, "credit.installment_failed");
+        notificationMessageListener.receiveMessage(request, "order.approved");
+        notificationMessageListener.receiveMessage(request, "tax.collected");
+
+        verify(notificationDeliveryService).handleIncomingMessage(request, "credit.installment_failed");
+        verify(notificationDeliveryService).handleIncomingMessage(request, "order.approved");
+        verify(notificationDeliveryService).handleIncomingMessage(request, "tax.collected");
+    }
 }

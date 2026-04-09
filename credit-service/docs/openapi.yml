@@ -1,0 +1,548 @@
+openapi: 3.1.0
+info:
+  title: Account service API
+  description: API for accounts
+  version: "1.0"
+servers:
+- url: http://localhost:8089
+  description: Generated server url
+security:
+- bearerAuth: []
+paths:
+  /api/loans/requests/{id}/decline:
+    put:
+      tags:
+      - loan-controller
+      operationId: decline
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+  /api/loans/requests/{id}/approve:
+    put:
+      tags:
+      - loan-controller
+      operationId: approve
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+  /api/loans/requests:
+    get:
+      tags:
+      - loan-controller
+      operationId: findAllLoanRequest
+      parameters:
+      - name: vrstaKredita
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: brojRacuna
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+          minimum: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+          maximum: 100
+          minimum: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PageLoanRequest"
+    post:
+      tags:
+      - loan-controller
+      operationId: requests
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoanRequestDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/LoanRequestResponseDto"
+  /api/loans/{loanNumber}:
+    get:
+      tags:
+      - loan-controller
+      operationId: info
+      parameters:
+      - name: loanNumber
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/LoanInfoResponseDto"
+  /api/loans/client:
+    get:
+      tags:
+      - loan-controller
+      operationId: find
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+          minimum: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+          maximum: 100
+          minimum: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PageLoanResponseDto"
+  /api/loans/all:
+    get:
+      tags:
+      - loan-controller
+      operationId: findAllLoans
+      parameters:
+      - name: vrstaKredita
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: brojRacuna
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: loanStatus
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+          minimum: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+          maximum: 100
+          minimum: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PageLoanResponseDto"
+components:
+  schemas:
+    LoanRequestDto:
+      type: object
+      properties:
+        loanType:
+          type: string
+          enum:
+          - GOTOVINSKI
+          - STAMBENI
+          - AUTO
+          - REFINANSIRAJUCI
+          - STUDENTSKI
+        interestType:
+          type: string
+          enum:
+          - FIXED
+          - VARIABLE
+        amount:
+          type: number
+        currency:
+          type: string
+          enum:
+          - RSD
+          - EUR
+          - CHF
+          - USD
+          - GBP
+          - JPY
+          - CAD
+          - AUD
+        purpose:
+          type: string
+          minLength: 1
+        monthlySalary:
+          type: number
+        employmentStatus:
+          type: string
+          enum:
+          - PERMANENT
+          - TEMPORARY
+          - UNEMPLOYED
+        currentEmploymentPeriod:
+          type: integer
+          format: int32
+        repaymentPeriod:
+          type: integer
+          format: int32
+        contactPhone:
+          type: string
+          minLength: 1
+        accountNumber:
+          type: string
+          minLength: 1
+        clientId:
+          type: integer
+          format: int64
+      required:
+      - accountNumber
+      - amount
+      - clientId
+      - contactPhone
+      - currency
+      - currentEmploymentPeriod
+      - employmentStatus
+      - interestType
+      - loanType
+      - monthlySalary
+      - purpose
+      - repaymentPeriod
+    LoanRequestResponseDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        createdAt:
+          type: string
+          format: date-time
+    InstallmentResponseDto:
+      type: object
+      properties:
+        installmentAmount:
+          type: number
+        interestRateAtPayment:
+          type: number
+        currency:
+          type: string
+          enum:
+          - RSD
+          - EUR
+          - CHF
+          - USD
+          - GBP
+          - JPY
+          - CAD
+          - AUD
+        expectedDueDate:
+          type: string
+          format: date
+        actualDueDate:
+          type: string
+          format: date
+        paymentStatus:
+          type: string
+          enum:
+          - PAID
+          - UNPAID
+          - OVERDUE
+    LoanInfoResponseDto:
+      type: object
+      properties:
+        loan:
+          $ref: "#/components/schemas/LoanResponseDto"
+        installments:
+          type: array
+          items:
+            $ref: "#/components/schemas/InstallmentResponseDto"
+    LoanResponseDto:
+      type: object
+      properties:
+        loanNumber:
+          type: integer
+          format: int64
+        loanType:
+          type: string
+          enum:
+          - GOTOVINSKI
+          - STAMBENI
+          - AUTO
+          - REFINANSIRAJUCI
+          - STUDENTSKI
+        accountNumber:
+          type: string
+        amount:
+          type: number
+        repaymentMethod:
+          type: integer
+          format: int32
+        nominalInterestRate:
+          type: number
+        effectiveInterestRate:
+          type: number
+        interestType:
+          type: string
+          enum:
+          - FIXED
+          - VARIABLE
+        agreementDate:
+          type: string
+          format: date
+        maturityDate:
+          type: string
+          format: date
+        installmentAmount:
+          type: number
+        nextInstallmentDate:
+          type: string
+          format: date
+        remainingDebt:
+          type: number
+        status:
+          type: string
+          enum:
+          - PENDING
+          - APPROVED
+          - DECLINED
+          - ACTIVE
+          - OVERDUE
+          - PAID_OFF
+    LoanRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        version:
+          type: integer
+          format: int64
+        deleted:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        loanType:
+          type: string
+          enum:
+          - GOTOVINSKI
+          - STAMBENI
+          - AUTO
+          - REFINANSIRAJUCI
+          - STUDENTSKI
+        interestType:
+          type: string
+          enum:
+          - FIXED
+          - VARIABLE
+        amount:
+          type: number
+        currency:
+          type: string
+          enum:
+          - RSD
+          - EUR
+          - CHF
+          - USD
+          - GBP
+          - JPY
+          - CAD
+          - AUD
+        purpose:
+          type: string
+          minLength: 1
+        monthlySalary:
+          type: number
+        employmentStatus:
+          type: string
+          enum:
+          - PERMANENT
+          - TEMPORARY
+          - UNEMPLOYED
+        currentEmploymentPeriod:
+          type: integer
+          format: int32
+        repaymentPeriod:
+          type: integer
+          format: int32
+        contactPhone:
+          type: string
+          minLength: 1
+        accountNumber:
+          type: string
+          minLength: 1
+        clientId:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum:
+          - PENDING
+          - APPROVED
+          - DECLINED
+          - ACTIVE
+          - OVERDUE
+          - PAID_OFF
+      required:
+      - accountNumber
+      - contactPhone
+      - purpose
+    PageLoanRequest:
+      type: object
+      properties:
+        totalPages:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        size:
+          type: integer
+          format: int32
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/LoanRequest"
+        number:
+          type: integer
+          format: int32
+        sort:
+          $ref: "#/components/schemas/SortObject"
+        first:
+          type: boolean
+        last:
+          type: boolean
+        numberOfElements:
+          type: integer
+          format: int32
+        pageable:
+          $ref: "#/components/schemas/PageableObject"
+        empty:
+          type: boolean
+    PageableObject:
+      type: object
+      properties:
+        offset:
+          type: integer
+          format: int64
+        sort:
+          $ref: "#/components/schemas/SortObject"
+        paged:
+          type: boolean
+        unpaged:
+          type: boolean
+        pageNumber:
+          type: integer
+          format: int32
+        pageSize:
+          type: integer
+          format: int32
+    SortObject:
+      type: object
+      properties:
+        empty:
+          type: boolean
+        sorted:
+          type: boolean
+        unsorted:
+          type: boolean
+    PageLoanResponseDto:
+      type: object
+      properties:
+        totalPages:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        size:
+          type: integer
+          format: int32
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/LoanResponseDto"
+        number:
+          type: integer
+          format: int32
+        sort:
+          $ref: "#/components/schemas/SortObject"
+        first:
+          type: boolean
+        last:
+          type: boolean
+        numberOfElements:
+          type: integer
+          format: int32
+        pageable:
+          $ref: "#/components/schemas/PageableObject"
+        empty:
+          type: boolean
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

@@ -1,6 +1,7 @@
 package com.banka1.account_service.service.implementation;
 
 import com.banka1.account_service.domain.Account;
+import com.banka1.account_service.dto.request.BankPaymentDto;
 import com.banka1.account_service.dto.request.PaymentDto;
 import com.banka1.account_service.dto.response.UpdatedBalanceResponseDto;
 import com.banka1.account_service.exception.BusinessException;
@@ -92,9 +93,6 @@ public class TransactionalServiceImplementation implements TransactionalService 
         BigDecimal commission = paymentDto.getCommission();
         if (from.getCurrency().getOznaka() == to.getCurrency().getOznaka()) {
             debit(from, paymentDto.getFromAmount().add(commission));
-            if (commission.compareTo(BigDecimal.ZERO) > 0) {
-                credit(bankSender, commission);
-            }
             credit(to, paymentDto.getToAmount());
         } else {
             debit(from, paymentDto.getFromAmount());
@@ -103,6 +101,13 @@ public class TransactionalServiceImplementation implements TransactionalService 
             credit(to, paymentDto.getToAmount().subtract(commission));
         }
         return new UpdatedBalanceResponseDto(from.getStanje(), to.getStanje());
+    }
+
+    @Override
+    public void transfer(Account sender, Account recipient, BankPaymentDto paymentDto) {
+        debit(sender, paymentDto.getAmount());
+        credit(recipient, paymentDto.getAmount());
+        //return new UpdatedBalanceResponseDto(null,null);
     }
 
 

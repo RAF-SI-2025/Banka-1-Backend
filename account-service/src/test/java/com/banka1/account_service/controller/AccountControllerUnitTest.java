@@ -3,6 +3,7 @@ package com.banka1.account_service.controller;
 import com.banka1.account_service.domain.enums.CurrencyCode;
 import com.banka1.account_service.dto.request.PaymentDto;
 import com.banka1.account_service.dto.response.InfoResponseDto;
+import com.banka1.account_service.dto.response.InternalAccountDetailsDto;
 import com.banka1.account_service.dto.response.UpdatedBalanceResponseDto;
 import com.banka1.account_service.service.AccountService;
 import org.junit.jupiter.api.Test;
@@ -63,6 +64,32 @@ class AccountControllerUnitTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo(expected);
         verify(accountService).info(null, "111000100000000011", "111000100000000012");
+    }
+
+    @Test
+    void getAccountDetailsByIdReturnsOkAndDelegates() {
+        AccountController controller = new AccountController(accountService);
+        InternalAccountDetailsDto expected = new InternalAccountDetailsDto("111000100000000011", 1L, "RSD", new BigDecimal("250.00"), "ACTIVE", "PERSONAL");
+        when(accountService.getAccountDetails(42L)).thenReturn(expected);
+
+        ResponseEntity<InternalAccountDetailsDto> response = controller.getAccountDetailsById(null, 42L);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEqualTo(expected);
+        verify(accountService).getAccountDetails(42L);
+    }
+
+    @Test
+    void getBankAccountDetailsReturnsOkAndDelegates() {
+        AccountController controller = new AccountController(accountService);
+        InternalAccountDetailsDto expected = new InternalAccountDetailsDto("111000100000000099", -1L, "RSD", new BigDecimal("1000.00"), "ACTIVE", "PERSONAL");
+        when(accountService.getBankAccountDetails(CurrencyCode.RSD)).thenReturn(expected);
+
+        ResponseEntity<InternalAccountDetailsDto> response = controller.getBankAccountDetails(null, CurrencyCode.RSD);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEqualTo(expected);
+        verify(accountService).getBankAccountDetails(CurrencyCode.RSD);
     }
 
     private PaymentDto paymentDto() {

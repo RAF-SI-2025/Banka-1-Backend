@@ -177,6 +177,16 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
     @Override
     @Transactional(readOnly = true)
     public ConversionResponseDto convert(ConversionRequestDto request) {
+        return convertInternal(request, true);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ConversionResponseDto convertWithoutCommission(ConversionRequestDto request) {
+        return convertInternal(request, false);
+    }
+
+    private ConversionResponseDto convertInternal(ConversionRequestDto request, boolean includeCommission) {
         SupportedCurrency sourceCurrency = SupportedCurrency.from(request.fromCurrency());
         SupportedCurrency targetCurrency = SupportedCurrency.from(request.toCurrency());
         LocalDate snapshotDate = resolveSnapshotDate(request.date());
@@ -208,9 +218,11 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
                 ? amountInRsd.setScale(CALCULATION_SCALE, RoundingMode.HALF_UP)
                 : amountInRsd.divide(targetSellingRate, CALCULATION_SCALE, RoundingMode.HALF_UP);
         BigDecimal effectiveRate = convertedAmount.divide(request.amount(), CALCULATION_SCALE, RoundingMode.HALF_UP);
-        BigDecimal commission = request.amount()
+        BigDecimal commission = includeCommission
+                ? request.amount()
                 .multiply(resolveCommissionFactor())
-                .setScale(COMMISSION_SCALE, RoundingMode.HALF_UP);
+                .setScale(COMMISSION_SCALE, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO.setScale(COMMISSION_SCALE, RoundingMode.HALF_UP);
 
         return new ConversionResponseDto(
                 sourceCurrency.name(),
@@ -222,7 +234,6 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
                 snapshotDate
         );
     }
-
     /**
      * Fetches the exchange rate for one supported currency relative to the base RSD currency.
      *

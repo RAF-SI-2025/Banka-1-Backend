@@ -129,4 +129,22 @@ public class ExchangeRateController {
                 request.getDate()
         ));
     }
+
+    /**
+     * Calculates a currency conversion without commission for internal flows such as tax charging.
+     *
+     * @param request query DTO that Spring automatically populates from URL query parameters
+     * @return commission-free conversion result
+     */
+    @GetMapping("/internal/calculate/no-commission")
+    @Operation(summary = "Calculate currency equivalence via RSD base without commission")
+    @PreAuthorize("hasRole('SERVICE')")
+    public ConversionResponseDto calculateWithoutCommission(@Valid ConversionQueryDto request) {
+        return exchangeRateService.convertWithoutCommission(new ConversionRequestDto(
+                request.getAmount(),
+                request.getFromCurrency(),
+                request.getToCurrency(),
+                request.getDate()
+        ));
+    }
 }

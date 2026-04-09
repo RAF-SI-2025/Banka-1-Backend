@@ -9,6 +9,7 @@ import com.banka1.account_service.domain.enums.CurrencyCode;
 import com.banka1.account_service.domain.enums.Status;
 import com.banka1.account_service.dto.request.PaymentDto;
 import com.banka1.account_service.dto.response.InfoResponseDto;
+import com.banka1.account_service.dto.response.InternalAccountDetailsDto;
 import com.banka1.account_service.dto.response.UpdatedBalanceResponseDto;
 import com.banka1.account_service.repository.AccountRepository;
 import com.banka1.account_service.service.TransactionalService;
@@ -281,6 +282,31 @@ class AccountServiceImplementationTest {
         assertThatThrownBy(() -> service.info(null, "111000110000000011", "111000110000000022"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("ToAccount nije aktivan");
+    }
+
+    @Test
+    void getAccountDetailsByIdReturnsMappedDto() {
+        CheckingAccount account = checkingAccount("111000110000000011", 1L, RSD);
+        account.setId(42L);
+        when(accountRepository.findById(42L)).thenReturn(Optional.of(account));
+
+        InternalAccountDetailsDto result = service.getAccountDetails(42L);
+
+        assertThat(result.accountNumber()).isEqualTo("111000110000000011");
+        assertThat(result.ownerId()).isEqualTo(1L);
+        assertThat(result.currency()).isEqualTo("RSD");
+    }
+
+    @Test
+    void getBankAccountDetailsReturnsBankRsdAccount() {
+        CheckingAccount bank = checkingAccount("111000110000000099", -1L, RSD);
+        when(accountRepository.findBankAccountByCurrencyCode(CurrencyCode.RSD)).thenReturn(Optional.of(bank));
+
+        InternalAccountDetailsDto result = service.getBankAccountDetails(CurrencyCode.RSD);
+
+        assertThat(result.accountNumber()).isEqualTo("111000110000000099");
+        assertThat(result.ownerId()).isEqualTo(-1L);
+        assertThat(result.currency()).isEqualTo("RSD");
     }
 
     // ──────────────────── helpers ────────────────────

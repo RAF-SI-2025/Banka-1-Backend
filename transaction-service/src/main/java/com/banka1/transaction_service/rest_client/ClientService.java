@@ -5,27 +5,25 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
+/**
+ * REST client for interacting with the Client Service.
+ * Provides methods for retrieving client information.
+ */
 @Service
 public class ClientService {
 
-
+    /** REST client with JWT authentication */
     private final RestClient restClient;
 
+    /**
+     * Constructor that injects the REST client for the User/Client Service.
+     *
+     * @param restClient configured REST client
+     */
     public ClientService(@Qualifier("userClient") RestClient restClient) {
         this.restClient = restClient;
     }
 
-//    public ClientInfoResponseDto getUser(String jmbg) {
-//        return clientServiceClient.get()
-//                .uri("/customers/jmbg/{jmbg}", jmbg)
-//                .retrieve()
-//                .body(ClientInfoResponseDto.class);
-//    }
-//    public ClientInfoResponseDto getUser(Long id) {
-//        return clientServiceClient.get()
-//                .uri("/customers/{id}", id)
-//                .retrieve()
-//                .body(ClientInfoResponseDto.class);
-//    }
+    // TODO: Add methods for finding users by JMBG and ID
 
 }

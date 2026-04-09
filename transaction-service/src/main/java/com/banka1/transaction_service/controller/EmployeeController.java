@@ -23,6 +23,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * REST controller for managing employee-related operations.
+ * Provides endpoints for retrieving employee-specific data.
+ */
 @RestController
 @AllArgsConstructor
 @RequestMapping("/employee")
@@ -30,7 +34,16 @@ public class EmployeeController {
 
     private TransactionService transactionService;
 
-    @Operation(summary = "Get all transactions for an account (employee access)")
+    /**
+     * Retrieves all transactions for a specific account accessible by an employee.
+     *
+     * @param jwt JWT token of the authenticated employee
+     * @param accountNumber the account number to retrieve transactions for
+     * @param page page number (starting from 0)
+     * @param size number of items per page
+     * @return a paginated list of transactions
+     */
+    @Operation(summary = "Get all transactions for an account (employee access")
     @ApiResponses({
             @ApiResponse(responseCode = "401", description = "Unauthorized",
                     content = @Content(schema = @Schema(implementation = ErrorResponseDto.class))),

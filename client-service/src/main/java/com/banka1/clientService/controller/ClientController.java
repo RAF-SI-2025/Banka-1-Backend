@@ -65,7 +65,7 @@ public class ClientController {
      * @return stranica klijenata koji odgovaraju filterima
      */
     @GetMapping
-    @PreAuthorize("hasRole('AGENT')")
+    @PreAuthorize("hasAnyRole('AGENT','SERVICE')")
     public ResponseEntity<Page<ClientResponseDto>> searchClients(
             @AuthenticationPrincipal Jwt jwt,
             @RequestParam(required = false) String ime,

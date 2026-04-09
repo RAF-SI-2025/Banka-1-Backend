@@ -1,6 +1,5 @@
 package com.banka1.transaction_service.dto.response;
 
-
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Getter;
 import lombok.Setter;
@@ -9,40 +8,35 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
- * Standardizovani DTO za odgovore sa greskama koji se vraca klijentu.
- * Sadrzi masinsko citljiv kod greske, kratak naslov, opis i opcione detalje validacije.
- * Polja sa {@code null} vrednoscu se preskaciju pri serijalizaciji.
+ * DTO representing an error response.
+ * Contains details about the error that occurred.
  */
 @Getter
 @Setter
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ErrorResponseDto {
 
-    /**
-     * Stabilan masinsko-citljivi identifikator greske (npr. {@code "ERR_USER_001"}).
-     * Klijent moze koristiti ovaj kod za programsku obradu razlicitih scenarija greski
-     * bez oslanjanja na tekst poruke koji se moze menjati (prevodi, prephrasing).
-     */
+    /** Error code identifying the type of error. */
     private String errorCode;
 
-    /** Kratak, ljudski citljivi naziv greske. */
+    /** Short, human-readable error title. */
     private String errorTitle;
 
-    /** Detaljan opis greske prosledjen iz poslovne logike. */
+    /** Error message providing details about the error. */
     private String errorDesc;
 
-    /** Vreme nastanka greske. */
+    /** Timestamp when the error occurred. */
     private LocalDateTime timestamp = LocalDateTime.now();
 
-    /** Mapa neispravnih polja i odgovarajucih poruka validacije (prisutna samo kod 400 validacionih gresaka). */
+    /** Additional information about the error (optional). */
     private Map<String, String> validationErrors;
 
     /**
-     * Kreira odgovor za opste ili biznis greske bez detalja validacije.
+     * Creates an error response for general or business errors without validation details.
      *
-     * @param errorCode stabilan kod greske za klijentsku obradu
-     * @param errorTitle kratak naslov greske
-     * @param errorDesc detaljan opis greske
+     * @param errorCode stable error code for client processing
+     * @param errorTitle short error title
+     * @param errorDesc detailed error description
      */
     public ErrorResponseDto(String errorCode, String errorTitle, String errorDesc) {
         this.errorCode = errorCode;
@@ -51,12 +45,12 @@ public class ErrorResponseDto {
     }
 
     /**
-     * Kreira odgovor za validacione greske sa mapom neispravnih polja.
+     * Creates an error response for validation errors with a map of invalid fields.
      *
-     * @param errorCode stabilan kod greske za klijentsku obradu
-     * @param errorTitle kratak naslov greske
-     * @param errorDesc detaljan opis greske
-     * @param validationErrors mapa polja i poruka validacije
+     * @param errorCode stable error code for client processing
+     * @param errorTitle short error title
+     * @param errorDesc detailed error description
+     * @param validationErrors map of fields and validation messages
      */
     public ErrorResponseDto(String errorCode, String errorTitle, String errorDesc, Map<String, String> validationErrors) {
         this.errorCode = errorCode;

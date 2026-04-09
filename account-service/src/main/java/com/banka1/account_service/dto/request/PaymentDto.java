@@ -77,7 +77,7 @@ public class PaymentDto {
     private BigDecimal commission;
 
     /**
-     * ID klijenta koji inicira transfer (opciono, za audit log).
+     * ID klijenta koji inicira transfer (za audit log).
      */
     @NotNull(message = "Unesi id clienta")
     private Long clientId;

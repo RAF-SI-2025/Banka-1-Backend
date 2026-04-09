@@ -1,0 +1,55 @@
+services:
+  postgres_order:
+    image: postgres:16
+    container_name: banka_order_db
+    ports:
+      - "${ORDER_DB_EX_PORT:-5441}:5432"
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${ORDER_DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${ORDER_DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${ORDER_DB_NAME:-orderdb}
+    volumes:
+      - postgres_order_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: banka_rabbitmq_order
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    restart: unless-stopped
+
+  order-service:
+    build:
+      context: ..
+      dockerfile: order-service/Dockerfile
+    container_name: banka_order_service
+    ports:
+      - "${ORDER_SERVER_PORT:-8088}:${ORDER_SERVER_PORT:-8088}"
+    env_file:
+      - .env
+    environment:
+      ORDER_DB_HOST: postgres_order
+      ORDER_DB_PORT: 5432
+      RABBITMQ_HOST: rabbitmq
+      ORDER_SERVER_PORT: ${ORDER_SERVER_PORT:-8088}
+    depends_on:
+      postgres_order:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    restart: on-failure
+
+volumes:
+  postgres_order_data:

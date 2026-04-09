@@ -1,0 +1,80 @@
+version: "3.9"
+
+services:
+  postgres_credit:
+    image: postgres:15
+    container_name: postgres_credit
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${CREDIT_DB_NAME}
+      POSTGRES_USER: ${CREDIT_DB_USER}
+      POSTGRES_PASSWORD: ${CREDIT_DB_PASSWORD}
+    ports:
+      - "${CREDIT_DB_PORT}:5432"
+    volumes:
+      - postgres_credit_data:/var/lib/postgresql/data
+    networks:
+      - banka-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    ports:
+      - "${RABBITMQ_PORT}:${RABBITMQ_PORT}"
+      - "${RABBITMQ_MANAGEMENT_PORT}:${RABBITMQ_MANAGEMENT_PORT}"
+    networks:
+      - banka-network
+
+#  credit-service:
+#    build:
+#      context: ..
+#      dockerfile: credit-service/Dockerfile
+#    container_name: credit-service
+#    restart: unless-stopped
+#    depends_on:
+#      - postgres_credit
+#      - rabbitmq
+#    environment:
+#      CREDIT_SERVER_PORT: ${CREDIT_SERVER_PORT}
+#
+#      CREDIT_DB_HOST: ${CREDIT_DB_HOST}
+#      CREDIT_DB_PORT: ${CREDIT_DB_PORT}
+#      CREDIT_DB_NAME: ${CREDIT_DB_NAME}
+#      CREDIT_DB_USER: ${CREDIT_DB_USER}
+#      CREDIT_DB_PASSWORD: ${CREDIT_DB_PASSWORD}
+#
+#      SERVICES_USER_URL: ${SERVICES_USER_URL}
+#      CLIENT_SERVER_PORT: ${CLIENT_SERVER_PORT}
+#      SERVICES_CARD_URL: ${SERVICES_CARD_URL}
+#      SERVICES_VERIFICATION_URL: ${SERVICES_VERIFICATION_URL}
+#      SERVICE_VERIFICATION_PORT: ${SERVICE_VERIFICATION_PORT}
+#      SKIP_VERIFICATION: ${SKIP_VERIFICATION}
+#      SERVICES_EXCHANGE_URL: ${SERVICES_EXCHANGE_URL}
+#      SERVICE_EXCHANGE_PORT: ${SERVICE_EXCHANGE_PORT}
+#      SERVICES_ACCOUNT_URL: ${SERVICES_ACCOUNT_URL}
+#
+#      RABBITMQ_HOST: ${RABBITMQ_HOST}
+#      RABBITMQ_PORT: ${RABBITMQ_PORT}
+#      RABBITMQ_MANAGEMENT_PORT: ${RABBITMQ_MANAGEMENT_PORT}
+#      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME}
+#      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+#      NOTIFICATION_QUEUE: ${NOTIFICATION_QUEUE}
+#      NOTIFICATION_EXCHANGE: ${NOTIFICATION_EXCHANGE}
+#      NOTIFICATION_ROUTING_KEY: ${NOTIFICATION_ROUTING_KEY}
+#
+#      JWT_SECRET: ${JWT_SECRET}
+#    ports:
+#      - "${CREDIT_SERVER_PORT}:${CREDIT_SERVER_PORT}"
+#    networks:
+#      - banka-network
+
+volumes:
+  postgres_credit_data:
+
+networks:
+  banka-network:
+    driver: bridge

@@ -1,7 +1,9 @@
 package com.banka1.account_service.service;
 
+import com.banka1.account_service.dto.request.BankPaymentDto;
 import com.banka1.account_service.dto.request.PaymentDto;
 
+import com.banka1.account_service.domain.enums.CurrencyCode;
 import com.banka1.account_service.dto.response.InfoResponseDto;
 import com.banka1.account_service.dto.response.InternalAccountDetailsDto;
 import com.banka1.account_service.dto.response.UpdatedBalanceResponseDto;
@@ -21,6 +23,9 @@ public interface AccountService {
      * @return azurirana stanja oba racuna nakon transakcije
      */
     UpdatedBalanceResponseDto transaction(PaymentDto paymentDto);
+
+
+    void transactionFromBank(BankPaymentDto paymentDto);
 
     /**
      * Izvrsava transfer izmedju dva racuna istog vlasnika.
@@ -51,4 +56,20 @@ public interface AccountService {
      * @return DTO sa detaljima racuna
      */
     InternalAccountDetailsDto getAccountDetails(String accountNumber);
+
+    /**
+     * Vraca detalje racuna po internom ID-u.
+     *
+     * @param accountId identifikator racuna
+     * @return DTO sa detaljima racuna
+     */
+    InternalAccountDetailsDto getAccountDetails(Long accountId);
+
+    /**
+     * Vraca interni bankovni/drzavni racun za zadatu valutu.
+     *
+     * @param currencyCode kod valute
+     * @return DTO sa detaljima internog racuna
+     */
+    InternalAccountDetailsDto getBankAccountDetails(CurrencyCode currencyCode);
 }

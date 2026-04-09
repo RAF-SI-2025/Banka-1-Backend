@@ -6,9 +6,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /**
- * DTO koji se salje RabbitMQ email servisu.
- * Sadrzi podatke potrebne za generisanje odgovarajuceg email-a.
- * Polja sa {@code null} vrednoscu se iskljucuju iz JSON serijalizacije.
+ * DTO sent to the RabbitMQ email service.
+ * Contains all necessary data for generating and sending email notifications.
+ * Fields with {@code null} values are excluded from JSON serialization.
  */
 @NoArgsConstructor
 @Getter
@@ -17,28 +17,26 @@ import lombok.Setter;
 public class EmailDto {
 
     /**
-     * Email adresa primaoca.
+     * Email address of the notification recipient.
      */
     private String userEmail;
 
     /**
-     * Ime ili korisnicko ime primaoca (koristi se u tekstu mejla).
+     * Name or username of the recipient (used in the email text).
      */
     private String username;
 
     /**
-     * Tip email notifikacije koji odredjuje sadrzaj i sablonu mejla.
+     * Type of email notification that determines the content and template of the email.
      */
     private EmailType emailType;
 
-
-
     /**
-     * Kreira payload za mejl koji ne zahteva dodatni link.
+     * Creates a payload for an email intended to notify the user about a transaction.
      *
-     * @param userEmail email adresa primaoca
-     * @param username  korisnicko ime ili ime za prikaz
-     * @param emailType tip email notifikacije
+     * @param username the username or display name for the email
+     * @param userEmail the email address of the recipient
+     * @param emailType the type of notification (TRANSACTION_COMPLETED or TRANSACTION_DENIED)
      */
     public EmailDto(String username, String userEmail, EmailType emailType) {
         this.userEmail = userEmail;

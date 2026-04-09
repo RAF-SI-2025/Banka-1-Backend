@@ -107,6 +107,58 @@ class NotificationServiceUnitTest {
     }
 
     /**
+     * Verifies that the new credit-approved template renders the provided placeholders.
+     *
+     * <p>This protects ISSUE #39 credit decision notifications from missing interpolation.
+     */
+    @Test
+    void resolveEmailContentRendersCreditApprovedTemplateVariables() {
+        NotificationRequest request = new NotificationRequest(
+                "Milica",
+                "milica@example.com",
+                Map.of("name", "Milica", "creditId", "77", "approvedAmount", "250000.00")
+        );
+        when(templateFactory.resolve("CREDIT_APPROVED")).thenReturn(
+                new EmailTemplate(
+                        "Credit Request Approved",
+                        "Zdravo {{name}}, vas kreditni zahtev sa identifikatorom {{creditId}} je odobren. Odobren iznos: {{approvedAmount}}."
+                )
+        );
+
+        ResolvedEmail resolved = notificationService.resolveEmailContent(request, "CREDIT_APPROVED");
+
+        assertEquals("milica@example.com", resolved.recipientEmail());
+        assertEquals("Credit Request Approved", resolved.subject());
+        assertEquals("Zdravo Milica, vas kreditni zahtev sa identifikatorom 77 je odobren. Odobren iznos: 250000.00.", resolved.body());
+    }
+
+    /**
+     * Verifies that the tax-collected template renders the tax-specific placeholders.
+     *
+     * <p>This protects the latest tax notification rendering path from config-only drift.
+     */
+    @Test
+    void resolveEmailContentRendersTaxCollectedTemplateVariables() {
+        NotificationRequest request = new NotificationRequest(
+                "Milan",
+                "milan@example.com",
+                Map.of("name", "Milan", "listingId", "123", "transactionId", "456", "tax", "37.50", "taxRsd", "2925.00")
+        );
+        when(templateFactory.resolve("TAX_COLLECTED")).thenReturn(
+                new EmailTemplate(
+                        "Tax Collected",
+                        "Zdravo {{name}}, naplacen je porez za listing {{listingId}}. Transakcija: {{transactionId}}, porez: {{tax}}, porez u RSD: {{taxRsd}}."
+                )
+        );
+
+        ResolvedEmail resolved = notificationService.resolveEmailContent(request, "TAX_COLLECTED");
+
+        assertEquals("milan@example.com", resolved.recipientEmail());
+        assertEquals("Tax Collected", resolved.subject());
+        assertEquals("Zdravo Milan, naplacen je porez za listing 123. Transakcija: 456, porez: 37.50, porez u RSD: 2925.00.", resolved.body());
+    }
+
+    /**
      * Verifies that resolving email content fails when the recipient email is blank.
      *
      * <p>This protects the service from generating deliverable content for an invalid recipient.

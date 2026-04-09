@@ -129,6 +129,32 @@ class ExchangeRateControllerWebMvcTest {
     }
 
     /**
+     * Proverava da interni commission-free endpoint postoji i mapira se na
+     * namenski servisni metod za porez/settlement tokove.
+     */
+    @Test
+    void calculateWithoutCommissionReturnsZeroCommissionResponse() throws Exception {
+        when(exchangeRateService.convertWithoutCommission(any(ConversionRequestDto.class)))
+                .thenReturn(new ConversionResponseDto(
+                        "USD",
+                        "RSD",
+                        new BigDecimal("37.50"),
+                        new BigDecimal("2925.00000000"),
+                        new BigDecimal("78.00000000"),
+                        BigDecimal.ZERO,
+                        LocalDate.of(2026, 3, 22)
+                ));
+
+        mockMvc.perform(get("/internal/calculate/no-commission")
+                        .param("fromCurrency", "USD")
+                        .param("toCurrency", "RSD")
+                        .param("amount", "37.50"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.toAmount").value(2925.00000000))
+                .andExpect(jsonPath("$.commission").value(0));
+    }
+
+    /**
      * Proverava da neispravni query parametri za kalkulaciju vracaju
      * `ERR_VALIDATION` i mapu konkretnih polja.
      * Prolaz znaci da je javni API kontrakt validacionih gresaka stabilan.

@@ -8,9 +8,18 @@ import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * Configuration class for Swagger API documentation.
+ * Provides a bean for configuring the OpenAPI specification.
+ */
 @Configuration
 public class SwaggerConfig {
 
+    /**
+     * Creates a bean for the OpenAPI specification.
+     *
+     * @return the OpenAPI specification bean
+     */
     @Bean
     public OpenAPI openAPI() {
         return new OpenAPI()

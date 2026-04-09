@@ -379,6 +379,26 @@ class ExchangeRateServiceImplTest {
     }
 
     /**
+     * Proverava da interni no-commission conversion path eksplicitno vraca nultu proviziju
+     * bez menjanja standardnog konverzionog ponasanja za ostale tokove.
+     */
+    @Test
+    void convertWithoutCommissionReturnsZeroCommissionWhileKeepingNormalAmountCalculation() {
+        LocalDate latestDate = LocalDate.of(2026, 3, 22);
+        when(exchangeRateRepository.findLatestDate()).thenReturn(latestDate);
+        when(exchangeRateRepository.findByCurrencyCodeAndDate("USD", latestDate))
+                .thenReturn(Optional.of(entity("USD", "107.00", "108.00", latestDate)));
+
+        ConversionResponseDto response = exchangeRateService.convertWithoutCommission(
+                new ConversionRequestDto(new BigDecimal("2.00"), "USD", "RSD", null)
+        );
+
+        assertThat(response.toAmount()).isEqualByComparingTo("214.00000000");
+        assertThat(response.rate()).isEqualByComparingTo("107.00000000");
+        assertThat(response.commission()).isEqualByComparingTo("0.00");
+    }
+
+    /**
      * Proverava da date query parametar zaista bira trazeni istorijski snapshot.
      */
     @Test

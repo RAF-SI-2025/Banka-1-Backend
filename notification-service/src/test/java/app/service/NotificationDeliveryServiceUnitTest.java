@@ -277,6 +277,33 @@ class NotificationDeliveryServiceUnitTest {
     }
 
     /**
+     * Verifies that the new credit installment-failed routing key enters the normal delivery flow.
+     *
+     * <p>This covers the routing-key to template-type resolution path for ISSUE #39 without
+     * relying on any legacy employee/client events.
+     */
+    @Test
+    void handleIncomingMessageAcceptsCreditInstallmentFailedRoutingKey() {
+        NotificationRequest request = new NotificationRequest(
+                "Dimitrije",
+                TEST_EMAIL,
+                Map.of("name", "Dimitrije", "creditId", "42", "installmentAmount", "15000.00")
+        );
+        when(routingKeysMap.get("credit.installment_failed"))
+                .thenReturn("CREDIT_INSTALLMENT_FAILED");
+        when(notificationService.resolveEmailContent(request, "CREDIT_INSTALLMENT_FAILED"))
+                .thenReturn(new ResolvedEmail(TEST_EMAIL, "Installment Charge Failed", "Body"));
+
+        runHandleIncomingMessageInTransaction(
+                () -> notificationDeliveryService.handleIncomingMessage(request, "credit.installment_failed")
+        );
+
+        verify(notificationDeliveryTxService, never()).persistFailedAudit(any());
+        verify(notificationService).resolveEmailContent(request, "CREDIT_INSTALLMENT_FAILED");
+        verify(notificationDeliveryTxService).createPendingDelivery(any(NotificationDelivery.class));
+    }
+
+    /**
      * Verifies that a due retry task loads the delivery from persistence and completes it
      * successfully when sending succeeds.
      *

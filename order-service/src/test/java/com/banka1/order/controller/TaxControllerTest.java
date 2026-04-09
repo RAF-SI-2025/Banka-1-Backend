@@ -60,7 +60,7 @@ class TaxControllerTest {
     @Test
     void taxEndpointsHaveExpectedMappingsAndSecurity() throws Exception {
         Method collectTax = TaxController.class.getDeclaredMethod("collectTax");
-        assertThat(collectTax.getAnnotation(PostMapping.class).value()).containsExactly("/api/tax/collect");
+        assertThat(collectTax.getAnnotation(PostMapping.class).value()).containsExactly("/tax/collect");
         assertThat(collectTax.getAnnotation(PreAuthorize.class).value()).isEqualTo("hasRole('SUPERVISOR')");
 
         Method runTaxCalculationInternal = TaxController.class.getDeclaredMethod("runTaxCalculationInternal");
@@ -68,11 +68,11 @@ class TaxControllerTest {
         assertThat(runTaxCalculationInternal.getAnnotation(PreAuthorize.class).value()).isEqualTo("hasRole('SERVICE')");
 
         Method getAllDebts = TaxController.class.getDeclaredMethod("getAllDebts");
-        assertThat(getAllDebts.getAnnotation(GetMapping.class).value()).containsExactly("/api/tax/capital-gains/debts");
+        assertThat(getAllDebts.getAnnotation(GetMapping.class).value()).containsExactly("/tax/capital-gains/debts");
         assertThat(getAllDebts.getAnnotation(PreAuthorize.class).value()).isEqualTo("hasRole('SUPERVISOR')");
 
         Method getTaxTracking = TaxController.class.getDeclaredMethod("getTaxTracking", String.class, String.class, String.class);
-        assertThat(getTaxTracking.getAnnotation(GetMapping.class).value()).containsExactly("/api/tax/tracking");
+        assertThat(getTaxTracking.getAnnotation(GetMapping.class).value()).containsExactly("/tax/tracking");
         assertThat(getTaxTracking.getAnnotation(PreAuthorize.class).value()).isEqualTo("hasRole('SUPERVISOR')");
     }
 }

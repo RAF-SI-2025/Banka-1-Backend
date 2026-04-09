@@ -56,13 +56,13 @@ class OrderControllerWebMvcTest {
         when(orderCreationService.confirmOrder(any(), eq(99L)))
                 .thenThrow(new ResourceNotFoundException("Order not found"));
 
-        mockMvc.perform(post("/api/orders/99/confirm")
+        mockMvc.perform(post("/orders/99/confirm")
                         .requestAttr("jwt", jwtPrincipal(List.of("CLIENT_TRADING"))))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.error").value("Not Found"))
                 .andExpect(jsonPath("$.message").value("Order not found"))
-                .andExpect(jsonPath("$.path").value("/api/orders/99/confirm"));
+                .andExpect(jsonPath("$.path").value("/orders/99/confirm"));
     }
 
     @Test
@@ -70,7 +70,7 @@ class OrderControllerWebMvcTest {
         when(orderCreationService.confirmOrder(any(), eq(100L)))
                 .thenThrow(new BusinessConflictException("Insufficient funds"));
 
-        mockMvc.perform(post("/api/orders/100/confirm")
+        mockMvc.perform(post("/orders/100/confirm")
                         .requestAttr("jwt", jwtPrincipal(List.of("CLIENT_TRADING"))))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.status").value(409))
@@ -82,7 +82,7 @@ class OrderControllerWebMvcTest {
         when(orderCreationService.approveOrder(eq(7L), eq(100L)))
                 .thenThrow(new BusinessConflictException("Only pending orders can be approved"));
 
-        mockMvc.perform(put("/api/orders/100/approve")
+        mockMvc.perform(put("/orders/100/approve")
                         .requestAttr("jwt", jwtPrincipal("7", List.of("SUPERVISOR"))))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("Only pending orders can be approved"));
@@ -93,7 +93,7 @@ class OrderControllerWebMvcTest {
         when(orderCreationService.approveOrder(eq(7L), eq(100L)))
                 .thenThrow(new BusinessConflictException("Orders with past settlement date can only be declined"));
 
-        mockMvc.perform(put("/api/orders/100/approve")
+        mockMvc.perform(put("/orders/100/approve")
                         .requestAttr("jwt", jwtPrincipal("7", List.of("SUPERVISOR"))))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.status").value(409))
@@ -105,7 +105,7 @@ class OrderControllerWebMvcTest {
         when(orderCreationService.cancelOrder(any(), eq(100L)))
                 .thenThrow(new ForbiddenOperationException("Order does not belong to the authenticated user"));
 
-        mockMvc.perform(post("/api/orders/100/cancel")
+        mockMvc.perform(post("/orders/100/cancel")
                         .requestAttr("jwt", jwtPrincipal(List.of("CLIENT_TRADING"))))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value(403))
@@ -121,7 +121,7 @@ class OrderControllerWebMvcTest {
         response.setOrderType(OrderType.MARKET);
         when(orderCreationService.confirmOrder(any(), eq(100L))).thenReturn(response);
 
-        mockMvc.perform(post("/api/orders/100/confirm")
+        mockMvc.perform(post("/orders/100/confirm")
                         .requestAttr("jwt", jwtPrincipal(List.of("CLIENT_TRADING"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(100))
@@ -130,7 +130,7 @@ class OrderControllerWebMvcTest {
 
     @Test
     void invalidBuyPayload_returns400WithFieldErrors() throws Exception {
-        mockMvc.perform(post("/api/orders/buy")
+        mockMvc.perform(post("/orders/buy")
                         .requestAttr("jwt", jwtPrincipal(List.of("CLIENT_TRADING")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -153,7 +153,7 @@ class OrderControllerWebMvcTest {
 
     @Test
     void invalidSellPayload_returns400WithFieldErrors() throws Exception {
-        mockMvc.perform(post("/api/orders/sell")
+        mockMvc.perform(post("/orders/sell")
                         .requestAttr("jwt", jwtPrincipal(List.of("AGENT")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""

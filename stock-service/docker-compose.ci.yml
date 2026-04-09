@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: stock_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d stock_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  stock-service:
+    build:
+      context: ..
+      dockerfile: stock-service/Dockerfile
+      args:
+        SERVER_PORT: 8090
+    environment:
+      STOCK_SERVICE_HOST: 0.0.0.0
+      STOCK_SERVICE_PORT: 8090
+      STOCK_DB_HOST: postgres
+      STOCK_DB_PORT: 5432
+      STOCK_DB_NAME: stock_db
+      STOCK_DB_USER: postgres
+      STOCK_DB_PASSWORD: postgres
+      JWT_SECRET: test_secret_key_at_least_32_characters_long
+      STOCK_EXCHANGE_SEED_ENABLED: "false"
+      STOCK_TICKER_SEED_ENABLED: "false"
+      STOCK_FUTURES_SEED_ENABLED: "false"
+      STOCK_FOREX_SEED_ENABLED: "false"
+      STOCK_LISTING_REFRESH_ENABLED: "false"
+      ALPHA_VANTAGE_API_KEY: ci-placeholder-key
+    depends_on:
+      postgres:
+        condition: service_healthy

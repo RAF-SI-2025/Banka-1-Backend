@@ -1,0 +1,51 @@
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: transaction_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d transaction_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+
+  rabbitmq:
+    image: rabbitmq:3
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+
+  transaction-service:
+    image: ci-test/transaction-service:latest
+    environment:
+      TRANSACTION_SERVER_PORT: 8087
+      TRANSACTION_DB_HOST: postgres
+      TRANSACTION_DB_PORT: 5432
+      TRANSACTION_DB_NAME: transaction_db
+      TRANSACTION_DB_USER: postgres
+      TRANSACTION_DB_PASSWORD: postgres
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: guest
+      RABBITMQ_PASSWORD: guest
+      NOTIFICATION_QUEUE: notification-service-queue
+      NOTIFICATION_EXCHANGE: employee.events
+      NOTIFICATION_ROUTING_KEY: employee.#
+      JWT_SECRET: ci-test-secret-that-is-long-enough-for-hmac
+      SERVICES_USER_URL: http://localhost
+      SERVICES_VERIFICATION_URL: http://localhost
+      SERVICES_EXCHANGE_URL: http://localhost
+      SERVICES_ACCOUNT_URL: http://localhost
+      SKIP_VERIFICATION: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy

@@ -188,6 +188,17 @@ public class OrderCreationServiceImpl implements OrderCreationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<OrderResponse> getMyOrders(AuthenticatedUser user) {
+        if (!user.isClient()) {
+            throw new ForbiddenOperationException("Only clients can view their orders");
+        }
+        return orderRepository.findByUserId(user.userId()).stream()
+                .map(this::mapStoredOrderToResponse)
+                .toList();
+    }
+
+    @Override
     @Transactional
     public OrderResponse confirmOrder(AuthenticatedUser user, Long orderId) {
         Order order = getOwnedOrder(user.userId(), orderId);
@@ -694,6 +705,15 @@ public class OrderCreationServiceImpl implements OrderCreationService {
             return;
         }
         orderNotificationProducer.sendOrderDeclined(payload);
+    }
+
+    private OrderResponse mapStoredOrderToResponse(Order order) {
+        StockListingDto listing = stockClient.getListing(order.getListingId());
+        BigDecimal approximatePrice = order.getPricePerUnit()
+                .multiply(BigDecimal.valueOf(order.getContractSize()))
+                .multiply(BigDecimal.valueOf(order.getQuantity()));
+        BigDecimal fee = calculateFee(orderPricingFamily(order.getOrderType()), approximatePrice, listing.getCurrency());
+        return mapToResponse(order, approximatePrice, fee, order.getExchangeClosed());
     }
 
     private OrderResponse mapToResponse(Order order, BigDecimal approximatePrice, BigDecimal fee, Boolean exchangeClosed) {

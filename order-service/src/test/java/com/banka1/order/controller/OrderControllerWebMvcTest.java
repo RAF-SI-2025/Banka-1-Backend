@@ -29,6 +29,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -126,6 +127,36 @@ class OrderControllerWebMvcTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(100))
                 .andExpect(jsonPath("$.status").value("APPROVED"));
+    }
+
+    @Test
+    void myOrders_returnsAuthenticatedClientOrders() throws Exception {
+        OrderResponse ownOrder = new OrderResponse();
+        ownOrder.setId(100L);
+        ownOrder.setUserId(42L);
+        ownOrder.setStatus(OrderStatus.APPROVED);
+        ownOrder.setDirection(OrderDirection.BUY);
+        ownOrder.setOrderType(OrderType.MARKET);
+        when(orderCreationService.getMyOrders(any())).thenReturn(List.of(ownOrder));
+
+        mockMvc.perform(get("/orders/my-orders")
+                        .requestAttr("jwt", jwtPrincipal("42", List.of("CLIENT_TRADING"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(100))
+                .andExpect(jsonPath("$[0].userId").value(42))
+                .andExpect(jsonPath("$[0].status").value("APPROVED"));
+    }
+
+    @Test
+    void myOrders_forbiddenUser_returns403Forbidden() throws Exception {
+        when(orderCreationService.getMyOrders(any()))
+                .thenThrow(new ForbiddenOperationException("Only clients can view their orders"));
+
+        mockMvc.perform(get("/orders/my-orders")
+                        .requestAttr("jwt", jwtPrincipal("7", List.of("AGENT"))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.message").value("Only clients can view their orders"));
     }
 
     @Test

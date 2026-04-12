@@ -4,6 +4,7 @@ import com.banka1.order.dto.OrderOverviewResponse;
 import com.banka1.order.dto.OrderResponse;
 import com.banka1.order.dto.PartialCancelOrderRequest;
 import com.banka1.order.entity.enums.OrderOverviewStatusFilter;
+import com.banka1.order.entity.enums.OrderStatus;
 import com.banka1.order.service.OrderCreationService;
 import jakarta.validation.Valid;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,6 +29,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.argThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -59,9 +61,30 @@ class OrderControllerTest {
     }
 
     @Test
+    void getMyOrders_delegatesAuthenticatedClientToService() {
+        OrderResponse row = new OrderResponse();
+        row.setId(10L);
+        row.setUserId(42L);
+        row.setStatus(OrderStatus.APPROVED);
+        when(orderCreationService.getMyOrders(any())).thenReturn(List.of(row));
+
+        ResponseEntity<List<OrderResponse>> response = controller.getMyOrders(jwtPrincipal("42", List.of("CLIENT_TRADING")));
+
+        assertThat(response.getBody()).hasSize(1);
+        assertThat(response.getBody().getFirst().getUserId()).isEqualTo(42L);
+        verify(orderCreationService).getMyOrders(argThat(user ->
+                user.userId().equals(42L) && user.roles().contains("CLIENT_TRADING")));
+    }
+
+    @Test
     void supervisorPortalEndpointsUseExpectedMappingsAndSecurity() throws Exception {
         assertGetMapping("getOrders");
         assertPreAuthorize("getOrders", "hasRole('SUPERVISOR')");
+
+        Method myOrders = OrderController.class.getDeclaredMethod("getMyOrders", Jwt.class);
+        assertThat(myOrders.getAnnotation(GetMapping.class).value()).containsExactly("/my-orders");
+        assertThat(myOrders.getAnnotation(PreAuthorize.class).value())
+                .isEqualTo("hasAnyRole('CLIENT_BASIC','CLIENT_TRADING','CLIENT')");
 
         assertPutMapping("approveOrder", "/{id}/approve");
         assertPreAuthorize("approveOrder", "hasRole('SUPERVISOR')");
@@ -121,5 +144,14 @@ class OrderControllerTest {
         PreAuthorize preAuthorize = method.getAnnotation(PreAuthorize.class);
         assertThat(preAuthorize).isNotNull();
         assertThat(preAuthorize.value()).isEqualTo(expected);
+    }
+
+    private Jwt jwtPrincipal(String subject, List<String> roles) {
+        return Jwt.withTokenValue("token")
+                .subject(subject)
+                .claim("roles", roles)
+                .claim("permissions", List.of())
+                .header("alg", "none")
+                .build();
     }
 }

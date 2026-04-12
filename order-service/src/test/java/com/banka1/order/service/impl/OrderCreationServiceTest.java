@@ -62,6 +62,7 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -1010,6 +1011,31 @@ class OrderCreationServiceTest {
     }
 
     @Test
+    void getMyOrders_returnsOnlyOrdersForAuthenticatedClient() {
+        Order ownFirst = orderForUser(501L, 1L);
+        Order ownSecond = orderForUser(502L, 1L);
+        when(orderRepository.findByUserId(1L)).thenReturn(List.of(ownFirst, ownSecond));
+        when(stockClient.getListing(42L)).thenReturn(listing);
+
+        List<OrderResponse> response = service.getMyOrders(clientUser);
+
+        assertThat(response).extracting(OrderResponse::getId).containsExactly(501L, 502L);
+        assertThat(response).extracting(OrderResponse::getUserId).containsOnly(1L);
+        verify(orderRepository).findByUserId(1L);
+        verify(orderRepository, never()).findAll();
+    }
+
+    @Test
+    void getMyOrders_rejectsNonClientUser() {
+        assertThatThrownBy(() -> service.getMyOrders(actuaryUser))
+                .isInstanceOf(ForbiddenOperationException.class)
+                .hasMessageContaining("Only clients can view their orders");
+
+        verify(orderRepository, never()).findByUserId(any());
+        verifyNoInteractions(stockClient);
+    }
+
+    @Test
     void cancellationReleasesReservationsAndExposure() {
         ActuaryInfo agent = new ActuaryInfo();
         agent.setEmployeeId(2L);
@@ -1158,5 +1184,28 @@ class OrderCreationServiceTest {
         verify(orderRepository).save(expiredPending);
         verify(orderRepository, never()).save(activePending);
         verify(orderNotificationProducer).sendOrderDeclined(any(OrderNotificationPayload.class));
+    }
+
+    private Order orderForUser(Long orderId, Long userId) {
+        Order order = new Order();
+        order.setId(orderId);
+        order.setUserId(userId);
+        order.setListingId(42L);
+        order.setOrderType(OrderType.MARKET);
+        order.setQuantity(10);
+        order.setContractSize(1);
+        order.setPricePerUnit(new BigDecimal("100.00"));
+        order.setDirection(OrderDirection.BUY);
+        order.setStatus(OrderStatus.APPROVED);
+        order.setApprovedBy(OrderCreationServiceImpl.NO_APPROVAL_REQUIRED);
+        order.setIsDone(false);
+        order.setLastModification(java.time.LocalDateTime.now());
+        order.setRemainingPortions(10);
+        order.setAfterHours(false);
+        order.setExchangeClosed(false);
+        order.setAllOrNone(false);
+        order.setMargin(false);
+        order.setAccountId(5L);
+        return order;
     }
 }

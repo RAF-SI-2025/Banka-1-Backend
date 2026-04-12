@@ -18,6 +18,7 @@ import com.banka1.order.dto.StockExchangeDto;
 import com.banka1.order.dto.StockListingDto;
 import com.banka1.order.dto.client.PaymentDto;
 import com.banka1.order.dto.response.UpdatedBalanceResponseDto;
+import com.banka1.order.entity.enums.ListingType;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -143,7 +144,19 @@ class LocalStubClientsConfig {
         return new StockClient() {
             @Override
             public StockListingDto getListing(Long id) {
-                throw new UnsupportedOperationException("Local profile stub does not provide listings");
+                if (Long.valueOf(1L).equals(id)) {
+                    return listing(1L, "AAPL", "Apple Inc.", "188.2500");
+                }
+                if (Long.valueOf(2L).equals(id)) {
+                    return listing(2L, "MSFT", "Microsoft Corporation", "420.0000");
+                }
+                if (Long.valueOf(3L).equals(id)) {
+                    return listing(3L, "GOOGL", "Alphabet Inc. Class A", "135.5000");
+                }
+                if (Long.valueOf(4L).equals(id)) {
+                    return listing(4L, "AMZN", "Amazon.com, Inc.", "160.0000");
+                }
+                throw new UnsupportedOperationException("Local profile stub does not provide listing " + id);
             }
 
             @Override
@@ -162,6 +175,22 @@ class LocalStubClientsConfig {
                 dto.setOpen(true);
                 dto.setClosed(false);
                 dto.setAfterHours(false);
+                return dto;
+            }
+
+            private StockListingDto listing(Long id, String ticker, String name, String price) {
+                StockListingDto dto = new StockListingDto();
+                dto.setId(id);
+                dto.setTicker(ticker);
+                dto.setName(name);
+                dto.setPrice(new BigDecimal(price));
+                dto.setAsk(new BigDecimal(price));
+                dto.setBid(new BigDecimal(price));
+                dto.setCurrency("USD");
+                dto.setExchangeId(1L);
+                dto.setContractSize(1);
+                dto.setListingType(ListingType.STOCK);
+                dto.setVolume(1_000_000L);
                 return dto;
             }
         };

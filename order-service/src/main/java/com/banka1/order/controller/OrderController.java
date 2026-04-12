@@ -75,6 +75,12 @@ public class OrderController {
         return ResponseEntity.ok(orderCreationService.getOrders(status, PageRequest.of(page, size)));
     }
 
+    @GetMapping("/my-orders")
+    @PreAuthorize("hasAnyRole('CLIENT_BASIC','CLIENT_TRADING','CLIENT')")
+    public ResponseEntity<List<OrderResponse>> getMyOrders(@AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(orderCreationService.getMyOrders(toAuthenticatedUser(jwt)));
+    }
+
     @PostMapping("/{id}/confirm")
     @PreAuthorize("hasAnyRole('CLIENT_TRADING','AGENT','SUPERVISOR')")
     public ResponseEntity<OrderResponse> confirmOrder(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id) {

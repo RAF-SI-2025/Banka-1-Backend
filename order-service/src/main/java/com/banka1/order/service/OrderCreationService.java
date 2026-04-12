@@ -43,6 +43,14 @@ public interface OrderCreationService {
     Page<OrderOverviewResponse> getOrders(OrderOverviewStatusFilter statusFilter, Pageable pageable);
 
     /**
+     * Returns orders owned by the authenticated client.
+     *
+     * @param user the authenticated client
+     * @return orders created by the client
+     */
+    List<OrderResponse> getMyOrders(AuthenticatedUser user);
+
+    /**
      * Confirms a draft order and finalizes validation, approval state, and fee transfer.
      *
      * @param user the authenticated owner of the order

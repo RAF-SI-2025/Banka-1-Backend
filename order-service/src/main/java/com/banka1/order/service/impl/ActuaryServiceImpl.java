@@ -17,7 +17,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Default implementation of {@link ActuaryService}.
@@ -59,29 +61,18 @@ public class ActuaryServiceImpl implements ActuaryService {
      */
     @Override
     public Page<ActuaryAgentDto> getAgents(String email, String ime, String prezime, String pozicija, Pageable pageable) {
-        List<ActuaryAgentDto> agents = new java.util.ArrayList<>();
-        int pageIndex = 0;
+        boolean singleTermSearch = ime != null && ime.equals(prezime);
 
-        while (true) {
-            EmployeePageResponse page = employeeClient.searchEmployees(email, ime, prezime, pozicija, pageIndex, EMPLOYEE_PAGE_SIZE);
-            if (page == null || page.getContent() == null || page.getContent().isEmpty()) {
-                break;
-            }
+        Map<Long, ActuaryAgentDto> agentMap = new LinkedHashMap<>();
 
-            agents.addAll(page.getContent().stream()
-                    .filter(emp -> "AGENT".equals(emp.getRole()))
-                    .map(emp -> {
-                        ActuaryInfo info = actuaryInfoRepository.findByEmployeeId(emp.getId())
-                                .orElseGet(() -> createDefaultActuaryInfo(emp.getId()));
-                        return toDto(emp, info);
-                    })
-                    .toList());
-
-            pageIndex++;
-            if (pageIndex >= page.getTotalPages()) {
-                break;
-            }
+        if (singleTermSearch) {
+            fetchAgents(email, ime, null, pozicija, agentMap);
+            fetchAgents(email, null, prezime, pozicija, agentMap);
+        } else {
+            fetchAgents(email, ime, prezime, pozicija, agentMap);
         }
+
+        List<ActuaryAgentDto> agents = new java.util.ArrayList<>(agentMap.values());
 
         if (pageable.isUnpaged()) {
             return new PageImpl<>(agents, pageable, agents.size());
@@ -90,6 +81,29 @@ public class ActuaryServiceImpl implements ActuaryService {
         int end = Math.min(start + pageable.getPageSize(), agents.size());
         List<ActuaryAgentDto> slice = start >= agents.size() ? List.of() : agents.subList(start, end);
         return new PageImpl<>(slice, pageable, agents.size());
+    }
+
+    private void fetchAgents(String email, String ime, String prezime, String pozicija, Map<Long, ActuaryAgentDto> agentMap) {
+        int pageIndex = 0;
+        while (true) {
+            EmployeePageResponse page = employeeClient.searchEmployees(email, ime, prezime, pozicija, pageIndex, EMPLOYEE_PAGE_SIZE);
+            if (page == null || page.getContent() == null || page.getContent().isEmpty()) {
+                break;
+            }
+
+            page.getContent().stream()
+                    .filter(emp -> "AGENT".equals(emp.getRole()))
+                    .forEach(emp -> agentMap.computeIfAbsent(emp.getId(), id -> {
+                        ActuaryInfo info = actuaryInfoRepository.findByEmployeeId(id)
+                                .orElseGet(() -> createDefaultActuaryInfo(id));
+                        return toDto(emp, info);
+                    }));
+
+            pageIndex++;
+            if (pageIndex >= page.getTotalPages()) {
+                break;
+            }
+        }
     }
 
     /**

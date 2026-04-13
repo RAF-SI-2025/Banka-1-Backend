@@ -2,6 +2,7 @@ package com.banka1.order.controller;
 
 import com.banka1.order.dto.ActuaryAgentDto;
 import com.banka1.order.dto.SetLimitRequestDto;
+import com.banka1.order.dto.SimpleResponse;
 import com.banka1.order.service.ActuaryService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -11,7 +12,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
@@ -19,9 +19,6 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -106,9 +103,11 @@ class ActuaryControllerTest {
         SetLimitRequestDto request = new SetLimitRequestDto();
         request.setLimit(new BigDecimal("5000000"));
 
-        ResponseEntity<Void> response = controller.setLimit(1L, request);
+        ResponseEntity<SimpleResponse> response = controller.setLimit(1L, request);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().status()).isEqualTo("success");
         verify(actuaryService).setLimit(1L, request);
     }
 
@@ -143,6 +142,7 @@ class ActuaryControllerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         verify(actuaryService).resetLimit(1L);
+
     }
 
     @Test

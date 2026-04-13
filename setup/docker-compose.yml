@@ -474,6 +474,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       STOCK_EXCHANGE_SERVICE_URL: http://exchange-service:${EXCHANGE_SERVER_PORT:-8085}
       STOCK_MARKET_DATA_BASE_URL: ${STOCK_MARKET_DATA_BASE_URL:-https://www.alphavantage.co}
+      STOCK_MARKET_DATA_API_KEY: ${STOCK_MARKET_DATA_API_KEY:-}
       ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY:-}
       MANAGEMENT_OTLP_METRICS_EXPORT_URL: http://otel-collector:4318/v1/metrics
       MANAGEMENT_OTLP_TRACING_ENDPOINT: http://otel-collector:4318/v1/traces

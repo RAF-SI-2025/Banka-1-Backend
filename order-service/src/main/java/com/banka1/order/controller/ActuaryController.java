@@ -2,6 +2,7 @@ package com.banka1.order.controller;
 
 import com.banka1.order.dto.ActuaryAgentDto;
 import com.banka1.order.dto.SetLimitRequestDto;
+import com.banka1.order.dto.SimpleResponse;
 import com.banka1.order.service.ActuaryService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -80,12 +81,12 @@ public class ActuaryController {
      */
     @PutMapping("/agents/{id}/limit")
     @PreAuthorize("hasRole('SUPERVISOR')")
-    public ResponseEntity<Void> setLimit(
+    public ResponseEntity<SimpleResponse> setLimit(
             @PathVariable Long id,
             @RequestBody @Valid SetLimitRequestDto request
     ) {
         actuaryService.setLimit(id, request);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(SimpleResponse.success("Limit updated successfully"));
     }
 
     /**

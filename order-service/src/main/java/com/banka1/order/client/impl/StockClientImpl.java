@@ -28,7 +28,7 @@ public class StockClientImpl implements StockClient {
     @Override
     public StockListingDto getListing(Long id) {
         return stockRestClient.get()
-                .uri("/api/listings/{id}", id)
+                .uri("/api/listings/{id}?period=DAY", id)
                 .retrieve()
                 .body(StockListingDto.class);
     }

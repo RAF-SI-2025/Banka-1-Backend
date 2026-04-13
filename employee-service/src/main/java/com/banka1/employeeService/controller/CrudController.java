@@ -100,6 +100,17 @@ public class CrudController {
     }
 
     /**
+     * Vraca jednog zaposlenog po identifikatoru.
+     *
+     * @param id identifikator zaposlenog
+     * @return zaposleni
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<EmployeeResponseDto> getEmployee(@PathVariable Long id) {
+        return ResponseEntity.ok(crudService.getEmployee(id));
+    }
+
+    /**
      * Azurira podatke zaposlenog po identifikatoru. Dostupno korisnicima sa AGENT ili jacom ulogom.
      * Vraca 202 Accepted ako je nalog deaktiviran, inace 200 OK.
      *

@@ -74,6 +74,14 @@ public interface CrudService {
     Page<EmployeeResponseDto> globalSearchEmployees(String query, Pageable pageable);
 
     /**
+     * Vraca jednog zaposlenog po identifikatoru.
+     *
+     * @param id identifikator zaposlenog
+     * @return zaposleni
+     */
+    EmployeeResponseDto getEmployee(Long id);
+
+    /**
      * Soft-brise zaposlenog po identifikatoru i salje email o deaktivaciji.
      *
      * @param id identifikator zaposlenog koji se brise

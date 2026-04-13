@@ -212,6 +212,21 @@ public class CrudServiceImplementation implements CrudService {
     }
 
     /**
+     * Vraca jednog zaposlenog po identifikatoru.
+     *
+     * @param id identifikator zaposlenog
+     * @return zaposleni
+     * @throws BusinessException ako zaposleni nije nadjen
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public EmployeeResponseDto getEmployee(Long id) {
+        Zaposlen zaposlen = zaposlenRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND, "ID: " + id));
+        return employeeMapper.toDto(zaposlen);
+    }
+
+    /**
      * Soft-brise zaposlenog i salje notifikaciju o deaktivaciji naloga.
      *
      * @param id identifikator zaposlenog koji se brise

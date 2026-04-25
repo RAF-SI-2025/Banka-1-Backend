@@ -16,6 +16,9 @@ import org.springframework.http.ResponseEntity;
 import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -103,6 +106,17 @@ class AccountControllerUnitTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo(expected);
         verify(accountService).getStateAccountDetails(CurrencyCode.RSD);
+    }
+
+    @Test
+    void getStateAccountDetailsRejectsNonRsdCurrency() {
+        AccountController controller = new AccountController(accountService);
+
+        assertThatThrownBy(() -> controller.getStateAccountDetails(null, CurrencyCode.EUR))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("RSD");
+
+        verify(accountService, never()).getStateAccountDetails(any());
     }
 
     private PaymentDto paymentDto() {

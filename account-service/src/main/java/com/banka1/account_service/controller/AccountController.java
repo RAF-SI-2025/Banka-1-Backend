@@ -87,6 +87,10 @@ public class AccountController {
      */
     @GetMapping("/state/{currencyCode}")
     public ResponseEntity<InternalAccountDetailsDto> getStateAccountDetails(@AuthenticationPrincipal Jwt jwt, @PathVariable CurrencyCode currencyCode) {
+        if (currencyCode != CurrencyCode.RSD) {
+            throw new IllegalArgumentException(
+                    "Drzavni racun postoji samo za RSD valutu, trazena valuta: " + currencyCode);
+        }
         return new ResponseEntity<>(accountService.getStateAccountDetails(currencyCode), HttpStatus.OK);
     }
 

@@ -91,6 +91,6 @@ SELECT
     NULL,
     'STANDARDNI',
     0.00,
-    NULL
+    'PERSONAL'
 FROM currency_table c
 WHERE c.oznaka = 'RSD';

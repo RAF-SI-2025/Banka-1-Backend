@@ -2,10 +2,13 @@ package com.banka1.transaction_service.advice;
 
 
 import com.banka1.transaction_service.dto.response.ErrorResponseDto;
+import com.banka1.transaction_service.exception.BusinessException;
+import com.banka1.transaction_service.exception.ErrorCode;
 import org.springframework.amqp.AmqpException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -89,6 +92,25 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handles access denied errors thrown by method-level security ({@code @PreAuthorize}).
+     * <p>
+     * {@code AuthorizationDeniedException} (Spring Security 6+) extends {@code AccessDeniedException},
+     * so this handler catches both.
+     *
+     * @param ex access denied exception
+     * @return HTTP 403 Forbidden response with code {@code ERR_FORBIDDEN}
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponseDto> handleAccessDenied(AccessDeniedException ex) {
+        ErrorResponseDto error = new ErrorResponseDto(
+                "ERR_FORBIDDEN",
+                "Pristup odbijen",
+                "Nemate dozvolu za ovu akciju."
+        );
+        return new ResponseEntity<>(error, HttpStatus.FORBIDDEN);
+    }
+
+    /**
      * Handles unexpected exceptions and returns a generic internal server error response.
      *
      * @param ex unexpected exception
@@ -104,22 +126,22 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-//    /**
-//     * Handles known business exceptions and maps them to the appropriate HTTP status.
-//     *
-//     * @param ex business exception containing domain-specific error code
-//     * @return response with business error details and HTTP status from {@link ErrorCode}
-//     */
-//    @ExceptionHandler(BusinessException.class)
-//    public ResponseEntity<ErrorResponseDto> handleBusinessException(BusinessException ex) {
-//        ErrorCode errorCode = ex.getErrorCode();
-//        ErrorResponseDto error = new ErrorResponseDto(
-//                errorCode.getCode(),
-//                errorCode.getTitle(),
-//                ex.getMessage()
-//        );
-//        return new ResponseEntity<>(error, errorCode.getHttpStatus());
-//    }
+    /**
+     * Handles known business exceptions and maps them to the appropriate HTTP status.
+     *
+     * @param ex business exception containing domain-specific error code
+     * @return response with business error details and HTTP status from {@link ErrorCode}
+     */
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ErrorResponseDto> handleBusinessException(BusinessException ex) {
+        ErrorCode errorCode = ex.getErrorCode();
+        ErrorResponseDto error = new ErrorResponseDto(
+                errorCode.getCode(),
+                errorCode.getTitle(),
+                ex.getMessage()
+        );
+        return new ResponseEntity<>(error, errorCode.getHttpStatus());
+    }
 
     /**
      * Handles validation errors for DTO requests and returns a list of invalid fields.

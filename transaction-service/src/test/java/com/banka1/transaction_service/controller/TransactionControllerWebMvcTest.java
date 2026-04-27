@@ -62,14 +62,14 @@ class TransactionControllerWebMvcTest {
     }
 
     @Test
-    void newPaymentReturnsInternalServerErrorForEmployeeBecauseAccessDeniedIsHandledGlobally() throws Exception {
+    void newPaymentReturnsForbiddenForEmployee() throws Exception {
         NewPaymentDto dto = validPaymentDto();
 
         mockMvc.perform(post("/payment")
                         .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_BASIC")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isForbidden());
     }
 
     @Test

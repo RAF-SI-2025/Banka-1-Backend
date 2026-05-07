@@ -18,6 +18,7 @@ import com.banka1.order.entity.enums.ListingType;
 import com.banka1.order.entity.enums.OrderDirection;
 import com.banka1.order.entity.enums.OrderStatus;
 import com.banka1.order.entity.enums.OrderType;
+import com.banka1.order.exception.FinancialTransferException;
 import com.banka1.order.repository.ActuaryInfoRepository;
 import com.banka1.order.repository.OrderRepository;
 import com.banka1.order.repository.PortfolioRepository;
@@ -116,6 +117,9 @@ public class OrderExecutionServiceImpl implements OrderExecutionService {
 
         try {
             selfProvider.getObject().executeOrderPortion(order);
+        } catch (FinancialTransferException e) {
+            log.error("Order {} execution reached a non-retryable financial transfer state; automatic retries are stopped", orderId, e);
+            return;
         } catch (Exception e) {
             log.error("Order {} execution attempt failed, retrying in {}ms", orderId, RETRY_DELAY_ON_ERROR_MILLIS, e);
             scheduleExecution(orderId, RETRY_DELAY_ON_ERROR_MILLIS);
@@ -177,15 +181,30 @@ public class OrderExecutionServiceImpl implements OrderExecutionService {
 
         createTransaction(managedOrder, quantityToExecute, executionPricePerUnit, grossChunkAmount, commission);
         updatePortfolio(managedOrder, listing, quantityToExecute, executionPricePerUnit);
-        transferFunds(managedOrder, listing.getCurrency(), grossChunkAmount);
-        finalizeActuaryExposure(managedOrder, listing.getCurrency(), grossChunkAmount);
+        boolean fundsTransferred = false;
+        try {
+            transferFunds(managedOrder, listing.getCurrency(), grossChunkAmount);
+            fundsTransferred = true;
+            finalizeActuaryExposure(managedOrder, listing.getCurrency(), grossChunkAmount);
 
-        managedOrder.setRemainingPortions(managedOrder.getRemainingPortions() - quantityToExecute);
-        if (managedOrder.getRemainingPortions() == 0) {
-            managedOrder.setIsDone(true);
-            managedOrder.setStatus(OrderStatus.DONE);
+            managedOrder.setRemainingPortions(managedOrder.getRemainingPortions() - quantityToExecute);
+            if (managedOrder.getRemainingPortions() == 0) {
+                managedOrder.setIsDone(true);
+                managedOrder.setStatus(OrderStatus.DONE);
+            }
+            orderRepository.save(managedOrder);
+        } catch (FinancialTransferException e) {
+            throw e;
+        } catch (Exception e) {
+            if (fundsTransferred) {
+                compensateCompletedTransfer(managedOrder, listing.getCurrency(), grossChunkAmount);
+                throw new FinancialTransferException(
+                        "Order " + managedOrder.getId() + " failed after funds were transferred; automatic retry blocked",
+                        e
+                );
+            }
+            throw e;
         }
-        orderRepository.save(managedOrder);
     }
 
     private boolean activateIfEligible(Order order, StockListingDto listing) {
@@ -363,17 +382,80 @@ public class OrderExecutionServiceImpl implements OrderExecutionService {
                     amount,
                     order.getUserId()
             ));
-            accountClient.creditBank(new CreditDebitBankDto(currency, amount));
+            try {
+                accountClient.creditBank(new CreditDebitBankDto(currency, amount));
+            } catch (Exception e) {
+                compensateClientAccountCredit(clientAccount.getAccountNumber(), amount, order.getUserId());
+                throw new FinancialTransferException(
+                        "Client BUY transfer could not be completed after debiting the client account",
+                        e
+                );
+            }
             return;
         }
 
         accountClient.debitBank(new CreditDebitBankDto(currency, amount));
+        try {
+            AccountDetailsDto clientAccount = accountClient.getAccountDetails(order.getAccountId());
+            accountClient.credit(new CreditDebitAccountDto(
+                    clientAccount.getAccountNumber(),
+                    amount,
+                    order.getUserId()
+            ));
+        } catch (Exception e) {
+            compensateBankCredit(currency, amount);
+            throw new FinancialTransferException(
+                    "SELL payout could not be completed after debiting the bank account",
+                    e
+            );
+        }
+    }
+
+    private void compensateCompletedTransfer(Order order, String currency, BigDecimal amount) {
+        try {
+            if (order.getDirection() == OrderDirection.BUY) {
+                compensateBuyTransfer(order, currency, amount);
+                return;
+            }
+            compensateSellTransfer(order, currency, amount);
+        } catch (Exception compensationError) {
+            log.error("Compensation failed for order {}", order.getId(), compensationError);
+        }
+    }
+
+    private void compensateBuyTransfer(Order order, String currency, BigDecimal amount) {
+        BankAccountDto bankAccount = employeeClient.getBankAccount(currency);
+        boolean bankFundedBuy = bankAccount.getAccountId() != null && bankAccount.getAccountId().equals(order.getAccountId());
+        if (bankFundedBuy) {
+            compensateBankCredit(currency, amount);
+            return;
+        }
+
         AccountDetailsDto clientAccount = accountClient.getAccountDetails(order.getAccountId());
-        accountClient.credit(new CreditDebitAccountDto(
-                clientAccount.getAccountNumber(),
-                amount,
-                order.getUserId()
-        ));
+        compensateBankDebit(currency, amount);
+        compensateClientAccountCredit(clientAccount.getAccountNumber(), amount, order.getUserId());
+    }
+
+    private void compensateSellTransfer(Order order, String currency, BigDecimal amount) {
+        AccountDetailsDto clientAccount = accountClient.getAccountDetails(order.getAccountId());
+        compensateClientAccountDebit(clientAccount.getAccountNumber(), amount, order.getUserId());
+        compensateBankCredit(currency, amount);
+    }
+
+    private void compensateClientAccountCredit(String accountNumber, BigDecimal amount, Long clientId) {
+        accountClient.credit(new CreditDebitAccountDto(accountNumber, amount, clientId));
+    }
+
+    private void compensateClientAccountDebit(String accountNumber, BigDecimal amount, Long clientId) {
+        accountClient.debit(new CreditDebitAccountDto(accountNumber, amount, clientId));
+    }
+
+    private void compensateBankCredit(String currency, BigDecimal amount) {
+        accountClient.creditBank(new CreditDebitBankDto(currency, amount));
+    }
+
+    private void compensateBankDebit(String currency, BigDecimal amount) {
+        accountClient.debitBank(new CreditDebitBankDto(currency, amount));
     }
 
     private void finalizeActuaryExposure(Order order, String currency, BigDecimal amount) {

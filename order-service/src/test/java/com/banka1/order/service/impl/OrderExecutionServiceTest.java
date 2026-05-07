@@ -18,6 +18,7 @@ import com.banka1.order.entity.enums.ListingType;
 import com.banka1.order.entity.enums.OrderDirection;
 import com.banka1.order.entity.enums.OrderStatus;
 import com.banka1.order.entity.enums.OrderType;
+import com.banka1.order.exception.FinancialTransferException;
 import com.banka1.order.repository.ActuaryInfoRepository;
 import com.banka1.order.repository.OrderRepository;
 import com.banka1.order.repository.PortfolioRepository;
@@ -40,9 +41,11 @@ import java.util.Optional;
 import java.util.concurrent.ScheduledFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -191,6 +194,23 @@ class OrderExecutionServiceTest {
         verify(orderExecutionTaskScheduler, org.mockito.Mockito.times(2)).schedule(any(Runnable.class), instantCaptor.capture());
         Instant secondScheduleTime = instantCaptor.getAllValues().getLast();
         assertThat(secondScheduleTime).isAfter(firstScheduleTime);
+    }
+
+    @Test
+    void executeOrderAsync_stopsRetryingAfterFinancialTransferException() {
+        org.mockito.ArgumentCaptor<Runnable> runnableCaptor = org.mockito.ArgumentCaptor.forClass(Runnable.class);
+        when(orderRepository.findById(10L)).thenReturn(Optional.of(order));
+        when(selfProvider.getObject()).thenReturn(self);
+        doThrow(new FinancialTransferException("stop", new RuntimeException("boom")))
+                .when(self).executeOrderPortion(order);
+
+        service.executeOrderAsync(10L);
+        verify(orderExecutionTaskScheduler).schedule(runnableCaptor.capture(), any(Instant.class));
+
+        runnableCaptor.getValue().run();
+
+        verify(self).executeOrderPortion(order);
+        verify(orderExecutionTaskScheduler, org.mockito.Mockito.times(1)).schedule(any(Runnable.class), any(Instant.class));
     }
 
     @Test
@@ -389,6 +409,10 @@ class OrderExecutionServiceTest {
         assertThat(debitBankCaptor.getValue().getCurrencyCode()).isEqualTo("USD");
         assertThat(creditCaptor.getValue().getAccountNumber()).isEqualTo("1110001400000000221");
         assertThat(creditCaptor.getValue().getClientId()).isEqualTo(1L);
+        assertThat(portfolio.getQuantity()).isEqualTo(2);
+        assertThat(order.getRemainingPortions()).isZero();
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.DONE);
+        assertThat(order.getIsDone()).isTrue();
     }
 
     @Test
@@ -414,6 +438,52 @@ class OrderExecutionServiceTest {
         assertThat(debitBankCaptor.getValue().getAmount()).isEqualByComparingTo("202.00");
         verify(accountClient, never()).debit(any(CreditDebitAccountDto.class));
         verify(accountClient, never()).creditBank(any(CreditDebitBankDto.class));
+    }
+
+    @Test
+    void sellExecution_compensatesBankDebitWhenClientCreditFails() {
+        order.setDirection(OrderDirection.SELL);
+        doThrow(new RuntimeException("credit failed"))
+                .when(accountClient).credit(any(CreditDebitAccountDto.class));
+
+        assertThatThrownBy(() -> service.executeOrderPortion(order))
+                .isInstanceOf(FinancialTransferException.class);
+
+        verify(accountClient).debitBank(any(CreditDebitBankDto.class));
+        verify(accountClient).credit(any(CreditDebitAccountDto.class));
+        verify(accountClient).creditBank(any(CreditDebitBankDto.class));
+    }
+
+    @Test
+    void sellExecution_compensatesAndBlocksRetryWhenPostTransferStateFails() {
+        order.setDirection(OrderDirection.SELL);
+        org.mockito.ArgumentCaptor<Runnable> runnableCaptor = org.mockito.ArgumentCaptor.forClass(Runnable.class);
+        when(orderRepository.findById(10L)).thenReturn(Optional.of(order));
+        when(selfProvider.getObject()).thenReturn(self);
+        doThrow(new FinancialTransferException("state failed", new RuntimeException("boom")))
+                .when(self).executeOrderPortion(order);
+
+        service.executeOrderAsync(10L);
+        verify(orderExecutionTaskScheduler).schedule(runnableCaptor.capture(), any(Instant.class));
+
+        runnableCaptor.getValue().run();
+
+        verify(self).executeOrderPortion(order);
+        verify(orderExecutionTaskScheduler, org.mockito.Mockito.times(1)).schedule(any(Runnable.class), any(Instant.class));
+    }
+
+    @Test
+    void sellExecution_compensatesCompletedTransferWhenOrderSaveFails() {
+        order.setDirection(OrderDirection.SELL);
+        when(orderRepository.save(any(Order.class))).thenThrow(new RuntimeException("save failed"));
+
+        assertThatThrownBy(() -> service.executeOrderPortion(order))
+                .isInstanceOf(FinancialTransferException.class);
+
+        verify(accountClient).debitBank(any(CreditDebitBankDto.class));
+        verify(accountClient, atLeastOnce()).credit(any(CreditDebitAccountDto.class));
+        verify(accountClient).debit(any(CreditDebitAccountDto.class));
+        verify(accountClient).creditBank(any(CreditDebitBankDto.class));
     }
 
     @Test

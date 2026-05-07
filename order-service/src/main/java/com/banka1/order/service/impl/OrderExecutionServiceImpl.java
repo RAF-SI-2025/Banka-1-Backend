@@ -354,6 +354,7 @@ public class OrderExecutionServiceImpl implements OrderExecutionService {
 
         if (order.getDirection() == OrderDirection.BUY) {
             if (actuaryOrder) {
+                accountClient.debitBank(new CreditDebitBankDto(currency, amount));
                 return;
             }
             AccountDetailsDto clientAccount = accountClient.getAccountDetails(order.getAccountId());

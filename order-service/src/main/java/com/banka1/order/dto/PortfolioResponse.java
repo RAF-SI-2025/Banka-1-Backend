@@ -29,6 +29,9 @@ import java.time.LocalDateTime;
 @Data
 public class PortfolioResponse {
 
+    /** Stock-service listing identifier used by portfolio SELL navigation and order creation. */
+    private Long listingId;
+
     /** Type of security held: STOCK, FUTURES, FOREX, or OPTION. */
     private ListingType listingType;
 

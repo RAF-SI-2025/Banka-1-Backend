@@ -1,6 +1,7 @@
 package com.banka1.order.controller;
 
 import com.banka1.order.dto.AuthenticatedUser;
+import com.banka1.order.dto.PortfolioResponse;
 import com.banka1.order.dto.PortfolioSummaryResponse;
 import com.banka1.order.dto.SetPublicQuantityRequestDto;
 import com.banka1.order.service.PortfolioService;
@@ -40,6 +41,9 @@ class PortfolioControllerTest {
     @Test
     void getPortfolio_usesAuthenticatedPrincipalInsteadOfRequestUserId() {
         PortfolioSummaryResponse summary = new PortfolioSummaryResponse();
+        PortfolioResponse holding = new PortfolioResponse();
+        holding.setListingId(100L);
+        summary.setHoldings(List.of(holding));
         when(portfolioService.getPortfolio(org.mockito.ArgumentMatchers.any())).thenReturn(summary);
 
         Jwt jwt = Jwt.withTokenValue("token")
@@ -52,6 +56,9 @@ class PortfolioControllerTest {
         ResponseEntity<PortfolioSummaryResponse> response = controller.getPortfolio(jwt);
 
         assertThat(response.getBody()).isSameAs(summary);
+        assertThat(response.getBody().getHoldings()).singleElement()
+                .extracting(PortfolioResponse::getListingId)
+                .isEqualTo(100L);
         ArgumentCaptor<AuthenticatedUser> captor = ArgumentCaptor.forClass(AuthenticatedUser.class);
         verify(portfolioService).getPortfolio(captor.capture());
         assertThat(captor.getValue().userId()).isEqualTo(42L);

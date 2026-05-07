@@ -408,6 +408,10 @@ class OrderExecutionServiceTest {
 
         service.executeOrderPortion(order);
 
+        ArgumentCaptor<CreditDebitBankDto> debitBankCaptor = ArgumentCaptor.forClass(CreditDebitBankDto.class);
+        verify(accountClient).debitBank(debitBankCaptor.capture());
+        assertThat(debitBankCaptor.getValue().getCurrencyCode()).isEqualTo("USD");
+        assertThat(debitBankCaptor.getValue().getAmount()).isEqualByComparingTo("202.00");
         verify(accountClient, never()).debit(any(CreditDebitAccountDto.class));
         verify(accountClient, never()).creditBank(any(CreditDebitBankDto.class));
     }

@@ -3,6 +3,8 @@ package com.banka1.order.client.impl;
 import com.banka1.order.client.AccountClient;
 import com.banka1.order.dto.AccountDetailsDto;
 import com.banka1.order.dto.AccountTransactionRequest;
+import com.banka1.order.dto.client.CreditDebitAccountDto;
+import com.banka1.order.dto.client.CreditDebitBankDto;
 import com.banka1.order.dto.client.PaymentDto;
 import com.banka1.order.dto.response.UpdatedBalanceResponseDto;
 import lombok.RequiredArgsConstructor;
@@ -75,6 +77,42 @@ public class AccountClientImpl implements AccountClient {
     @Override
     public void transfer(AccountTransactionRequest request) {
         postTransaction(request).toBodilessEntity();
+    }
+
+    @Override
+    public void debit(CreditDebitAccountDto request) {
+        accountRestClient.post()
+                .uri("/internal/accounts/debit")
+                .body(request)
+                .retrieve()
+                .toBodilessEntity();
+    }
+
+    @Override
+    public void credit(CreditDebitAccountDto request) {
+        accountRestClient.post()
+                .uri("/internal/accounts/credit")
+                .body(request)
+                .retrieve()
+                .toBodilessEntity();
+    }
+
+    @Override
+    public void debitBank(CreditDebitBankDto request) {
+        accountRestClient.post()
+                .uri("/internal/accounts/debitBank")
+                .body(request)
+                .retrieve()
+                .toBodilessEntity();
+    }
+
+    @Override
+    public void creditBank(CreditDebitBankDto request) {
+        accountRestClient.post()
+                .uri("/internal/accounts/creditBank")
+                .body(request)
+                .retrieve()
+                .toBodilessEntity();
     }
 
     @Override

@@ -16,6 +16,8 @@ import com.banka1.order.dto.ExchangeRateDto;
 import com.banka1.order.dto.ExchangeStatusDto;
 import com.banka1.order.dto.StockExchangeDto;
 import com.banka1.order.dto.StockListingDto;
+import com.banka1.order.dto.client.CreditDebitAccountDto;
+import com.banka1.order.dto.client.CreditDebitBankDto;
 import com.banka1.order.dto.client.PaymentDto;
 import com.banka1.order.dto.response.UpdatedBalanceResponseDto;
 import com.banka1.order.entity.enums.ListingType;
@@ -53,6 +55,22 @@ class LocalStubClientsConfig {
 
             @Override
             public void transfer(AccountTransactionRequest request) {
+            }
+
+            @Override
+            public void debit(CreditDebitAccountDto request) {
+            }
+
+            @Override
+            public void credit(CreditDebitAccountDto request) {
+            }
+
+            @Override
+            public void debitBank(CreditDebitBankDto request) {
+            }
+
+            @Override
+            public void creditBank(CreditDebitBankDto request) {
             }
 
             @Override

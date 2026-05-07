@@ -2,6 +2,8 @@ package com.banka1.order.client;
 
 import com.banka1.order.dto.AccountDetailsDto;
 import com.banka1.order.dto.AccountTransactionRequest;
+import com.banka1.order.dto.client.CreditDebitAccountDto;
+import com.banka1.order.dto.client.CreditDebitBankDto;
 import com.banka1.order.dto.client.PaymentDto;
 import com.banka1.order.dto.response.UpdatedBalanceResponseDto;
 
@@ -56,6 +58,14 @@ public interface AccountClient {
      * @param request the transaction request
      */
     void transfer(AccountTransactionRequest request);
+
+    void debit(CreditDebitAccountDto request);
+
+    void credit(CreditDebitAccountDto request);
+
+    void debitBank(CreditDebitBankDto request);
+
+    void creditBank(CreditDebitBankDto request);
 
     /**
      * Performs a same-owner cross-currency transfer using explicit debit and credit amounts.

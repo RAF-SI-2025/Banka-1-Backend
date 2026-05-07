@@ -17,6 +17,8 @@ import com.banka1.order.dto.OrderNotificationPayload;
 import com.banka1.order.dto.OrderOverviewResponse;
 import com.banka1.order.dto.OrderResponse;
 import com.banka1.order.dto.StockListingDto;
+import com.banka1.order.dto.client.CreditDebitAccountDto;
+import com.banka1.order.dto.client.CreditDebitBankDto;
 import com.banka1.order.dto.client.PaymentDto;
 import com.banka1.order.entity.ActuaryInfo;
 import com.banka1.order.entity.Order;
@@ -183,6 +185,10 @@ class OrderCreationServiceTest {
         lenient().when(accountClient.getAccountDetails(5L)).thenReturn(accountDetails);
         lenient().when(accountClient.getAccountDetails(999L)).thenReturn(accountDetails);
         lenient().doNothing().when(accountClient).transfer(any(AccountTransactionRequest.class));
+        lenient().doNothing().when(accountClient).debit(any(CreditDebitAccountDto.class));
+        lenient().doNothing().when(accountClient).credit(any(CreditDebitAccountDto.class));
+        lenient().doNothing().when(accountClient).debitBank(any(CreditDebitBankDto.class));
+        lenient().doNothing().when(accountClient).creditBank(any(CreditDebitBankDto.class));
         lenient().when(accountClient.transaction(any(PaymentDto.class))).thenReturn(null);
         lenient().when(employeeClient.getBankAccount("USD")).thenReturn(bankAccount);
         lenient().when(employeeClient.getEmployee(2L)).thenReturn(employee);
@@ -229,6 +235,13 @@ class OrderCreationServiceTest {
 
         assertThat(response.getStatus()).isEqualTo(OrderStatus.APPROVED);
         assertThat(response.getApprovedBy()).isEqualTo(OrderCreationServiceImpl.NO_APPROVAL_REQUIRED);
+        ArgumentCaptor<CreditDebitAccountDto> debitCaptor = ArgumentCaptor.forClass(CreditDebitAccountDto.class);
+        ArgumentCaptor<CreditDebitBankDto> creditBankCaptor = ArgumentCaptor.forClass(CreditDebitBankDto.class);
+        verify(accountClient).debit(debitCaptor.capture());
+        verify(accountClient).creditBank(creditBankCaptor.capture());
+        assertThat(debitCaptor.getValue().getAccountNumber()).isEqualTo("ACC-1");
+        assertThat(debitCaptor.getValue().getClientId()).isEqualTo(1L);
+        assertThat(creditBankCaptor.getValue().getCurrencyCode()).isEqualTo("USD");
         verify(accountClient, never()).transfer(any(AccountTransactionRequest.class));
         verify(orderExecutionService).executeOrderAsync(100L);
         // Approving the order must seed fresh quote data so the async executor can fill on
@@ -528,6 +541,8 @@ class OrderCreationServiceTest {
 
         assertThat(created.getStatus()).isEqualTo(OrderStatus.PENDING_CONFIRMATION);
         assertThat(confirmed.getStatus()).isEqualTo(OrderStatus.APPROVED);
+        verify(accountClient).debit(any(CreditDebitAccountDto.class));
+        verify(accountClient).creditBank(any(CreditDebitBankDto.class));
     }
 
     @Test
@@ -537,6 +552,15 @@ class OrderCreationServiceTest {
         assertThatThrownBy(() -> service.createSellOrder(clientUser, sellRequest))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Portfolio position not found");
+    }
+
+    @Test
+    void createSellOrder_rejectsForeignSettlementAccountForClient() {
+        accountDetails.setOwnerId(99L);
+
+        assertThatThrownBy(() -> service.createSellOrder(clientUser, sellRequest))
+                .isInstanceOf(ForbiddenOperationException.class)
+                .hasMessageContaining("Account does not belong to this user");
     }
 
     @Test

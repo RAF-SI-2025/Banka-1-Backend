@@ -16,6 +16,8 @@ import com.banka1.order.dto.OrderNotificationPayload;
 import com.banka1.order.dto.OrderOverviewResponse;
 import com.banka1.order.dto.OrderResponse;
 import com.banka1.order.dto.StockListingDto;
+import com.banka1.order.dto.client.CreditDebitAccountDto;
+import com.banka1.order.dto.client.CreditDebitBankDto;
 import com.banka1.order.dto.client.PaymentDto;
 import com.banka1.order.entity.ActuaryInfo;
 import com.banka1.order.entity.Order;
@@ -133,6 +135,9 @@ public class OrderCreationServiceImpl implements OrderCreationService {
 
         StockListingDto listing = stockClient.getListing(request.getListingId());
         validateTradingAccess(user, listing);
+        if (user.isClient()) {
+            validateClientAccount(user.userId(), request.getAccountId());
+        }
         ensurePortfolioOwnership(user.userId(), request.getListingId(), request.getQuantity());
         ExchangeWindow exchangeWindow = resolveExchangeWindow(listing);
         OrderType orderType = determineOrderType(request.getLimitValue(), request.getStopValue());
@@ -617,14 +622,36 @@ public class OrderCreationServiceImpl implements OrderCreationService {
     }
 
     private void transferFee(AuthenticatedUser user, Long fundingAccountId, BigDecimal fee, String currency) {
-        transferFee(fundingAccountId, fee, currency, user.isClient());
+        if (user.isClient()) {
+            transferClientFee(user.userId(), fundingAccountId, fee, currency);
+            return;
+        }
+        transferFeeLegacy(fundingAccountId, fee, currency, false);
     }
 
     private void transferFee(Long userId, Long fundingAccountId, BigDecimal fee, String currency) {
-        transferFee(fundingAccountId, fee, currency, !isEmployeeUser(userId));
+        if (!isEmployeeUser(userId)) {
+            transferClientFee(userId, fundingAccountId, fee, currency);
+            return;
+        }
+        transferFeeLegacy(fundingAccountId, fee, currency, false);
     }
 
-    private void transferFee(Long fundingAccountId, BigDecimal fee, String currency, boolean applyConversionFee) {
+    private void transferClientFee(Long clientId, Long fundingAccountId, BigDecimal fee, String currency) {
+        BankAccountDto bankAccount = employeeClient.getBankAccount(currency);
+        if (fundingAccountId != null && fundingAccountId.equals(bankAccount.getAccountId())) {
+            return;
+        }
+        AccountDetailsDto fundingAccount = accountClient.getAccountDetails(fundingAccountId);
+        accountClient.debit(new CreditDebitAccountDto(
+                fundingAccount.getAccountNumber(),
+                fee,
+                clientId
+        ));
+        accountClient.creditBank(new CreditDebitBankDto(currency, fee));
+    }
+
+    private void transferFeeLegacy(Long fundingAccountId, BigDecimal fee, String currency, boolean applyConversionFee) {
         BankAccountDto bankAccount = employeeClient.getBankAccount(currency);
         if (fundingAccountId != null && fundingAccountId.equals(bankAccount.getAccountId())) {
             return;

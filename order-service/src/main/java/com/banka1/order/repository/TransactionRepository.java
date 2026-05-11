@@ -22,6 +22,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
      */
     List<Transaction> findByOrderId(Long orderId);
 
+    List<Transaction> findByOrderIdIn(Collection<Long> orderIds);
+
     /**
      * Returns transactions executed between two timestamps (inclusive start, exclusive end).
      * Useful for monthly tax calculation.

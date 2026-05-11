@@ -9,6 +9,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.Optional;
 
 /**
  * RestClient-based implementation of {@link ExchangeClient}.
@@ -40,12 +42,18 @@ public class ExchangeClientImpl implements ExchangeClient {
 
     @Override
     public ExchangeRateDto calculateWithoutCommission(String fromCurrency, String toCurrency, BigDecimal amount) {
+        return calculateWithoutCommission(fromCurrency, toCurrency, amount, null);
+    }
+
+    @Override
+    public ExchangeRateDto calculateWithoutCommission(String fromCurrency, String toCurrency, BigDecimal amount, LocalDate date) {
         return exchangeRestClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/internal/calculate/no-commission")
                         .queryParam("fromCurrency", fromCurrency)
                         .queryParam("toCurrency", toCurrency)
                         .queryParam("amount", amount)
+                        .queryParamIfPresent("date", Optional.ofNullable(date))
                         .build())
                 .retrieve()
                 .body(ExchangeRateDto.class);

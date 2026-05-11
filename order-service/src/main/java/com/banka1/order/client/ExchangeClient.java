@@ -3,6 +3,7 @@ package com.banka1.order.client;
 import com.banka1.order.dto.ExchangeRateDto;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 /**
  * Client interface for communicating with the exchange-service.
@@ -30,4 +31,17 @@ public interface ExchangeClient {
      * @return conversion result for commission-free internal flows
      */
     ExchangeRateDto calculateWithoutCommission(String fromCurrency, String toCurrency, BigDecimal amount);
+
+    /**
+     * Calculates commission-free conversion using the exchange rate valid on a specific date.
+     *
+     * @param fromCurrency source currency code
+     * @param toCurrency   target currency code
+     * @param amount       the amount to convert
+     * @param date         exchange-rate date
+     * @return conversion result for commission-free internal flows
+     */
+    default ExchangeRateDto calculateWithoutCommission(String fromCurrency, String toCurrency, BigDecimal amount, LocalDate date) {
+        return calculateWithoutCommission(fromCurrency, toCurrency, amount);
+    }
 }

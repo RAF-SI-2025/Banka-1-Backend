@@ -1,0 +1,12 @@
+alembic==1.14.0
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+sqlalchemy[asyncio]==2.0.36
+asyncpg==0.30.0
+pydantic==2.9.2
+pydantic-settings==2.6.1
+httpx==0.28.0
+redis[asyncio]==5.2.0
+apscheduler==3.10.4
+PyJWT==2.9.0
+python-dotenv==1.0.1

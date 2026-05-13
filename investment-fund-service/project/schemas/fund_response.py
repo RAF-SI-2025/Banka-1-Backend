@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict
 
 
 class FundResponse(BaseModel):
-    """Serialised representation of an InvestmentFund without derived fields."""
+    """Serialised representation of an InvestmentFund; computed fields populated by the router."""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -20,3 +20,5 @@ class FundResponse(BaseModel):
     likvidna_sredstva: Decimal
     account_id: int
     datum_kreiranja: date
+    vrednost_fonda: Optional[Decimal] = None
+    profit: Optional[Decimal] = None

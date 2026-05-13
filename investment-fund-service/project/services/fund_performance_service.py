@@ -1,5 +1,6 @@
 """Service for recording and retrieving historical fund performance snapshots."""
 
+import logging
 from datetime import date, timedelta
 from typing import List
 
@@ -8,6 +9,10 @@ from project.models.fund_performance_snapshot import FundPerformanceSnapshot
 from project.repositories.fund_performance_repository import FundPerformanceRepository
 from project.repositories.investment_fund_repository import InvestmentFundRepository
 from project.services.fund_valuation_service import FundValuationService
+
+logger = logging.getLogger(__name__)
+
+_PERIOD_DAYS = {PerformancePeriod.MONTH: 30, PerformancePeriod.QUARTER: 90, PerformancePeriod.YEAR: 365}
 
 
 class FundPerformanceService:
@@ -19,26 +24,24 @@ class FundPerformanceService:
         self._perf_repo = perf_repo
         self._valuation = valuation_service
 
-    async def take_daily_snapshot(self) -> None:
+    async def take_daily_snapshot(self, bearer_token: str = "") -> None:
         """Compute and persist a daily performance snapshot for every active fund."""
         funds = await self._fund_repo.find_all()
         for fund in funds:
             try:
-                vrednost_fonda = await self._valuation.compute_vrednost_fonda(fund, "")
+                vrednost_fonda = await self._valuation.compute_vrednost_fonda(fund, bearer_token)
                 profit = await self._valuation.compute_profit(fund, vrednost_fonda)
-                snapshot = FundPerformanceSnapshot(fund_id=fund.id, date=date.today(), vrednost_fonda=vrednost_fonda, profit=profit, likvidna_sredstva=fund.likvidna_sredstva)
-                await self._perf_repo.save(snapshot)
-            except Exception:
+                await self._perf_repo.upsert_snapshot(fund.id, date.today(), vrednost_fonda, profit, fund.likvidna_sredstva)
+            except Exception as exc:
+                logger.error("Snapshot failed for fund %s: %s", fund.id, exc)
                 continue
 
     async def get_performance(self, fund_id: int, period: PerformancePeriod) -> List[FundPerformanceSnapshot]:
         """Return historical snapshots for the given fund and period."""
-        today = date.today()
-        period_days = {PerformancePeriod.MONTH: 30, PerformancePeriod.QUARTER: 90, PerformancePeriod.YEAR: 365}
-        since = today - timedelta(days=period_days[period])
+        since = date.today() - timedelta(days=_PERIOD_DAYS[period])
         return await self._perf_repo.find_by_fund_and_period(fund_id, since)
 
     @staticmethod
     def _period_to_days(period: PerformancePeriod) -> int:
         """Map a PerformancePeriod enum value to the corresponding number of days."""
-        return {PerformancePeriod.MONTH: 30, PerformancePeriod.QUARTER: 90, PerformancePeriod.YEAR: 365}[period]
+        return _PERIOD_DAYS[period]

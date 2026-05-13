@@ -1,5 +1,6 @@
 """Entry point for the investment-fund-service FastAPI application."""
 
+import logging
 from contextlib import asynccontextmanager
 from typing import Optional
 
@@ -8,14 +9,22 @@ import httpx
 import redis.asyncio as aioredis
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 
+from project.clients.banking_client import BankingClient
+from project.clients.jwt_token_generator import JwtTokenGenerator
+from project.clients.order_client import OrderClient
 from project.config.settings import get_settings
 from project.database.database import Database
 from project.dependencies import set_http_client, set_redis_client
 from project.exceptions.http_exception_handler import HttpExceptionHandler
 from project.middleware.auth_middleware import AuthMiddleware
+from project.repositories.client_fund_position_repository import ClientFundPositionRepository
+from project.repositories.client_fund_transaction_repository import ClientFundTransactionRepository
+from project.repositories.fund_performance_repository import FundPerformanceRepository
+from project.repositories.investment_fund_repository import InvestmentFundRepository
 from project.routers.bank_profit_router import BankProfitRouter
 from project.routers.fund_router import FundRouter
 from project.routers.investment_router import InvestmentRouter
@@ -23,6 +32,11 @@ from project.routers.performance_router import PerformanceRouter
 from project.routers.position_router import PositionRouter
 from project.routers.redemption_router import RedemptionRouter
 from project.routers.transaction_router import TransactionRouter
+from project.services.fund_liquidation_service import FundLiquidationService
+from project.services.fund_performance_service import FundPerformanceService
+from project.services.fund_valuation_service import FundValuationService
+
+logger = logging.getLogger(__name__)
 
 
 def create_app() -> FastAPI:
@@ -46,11 +60,46 @@ def create_app() -> FastAPI:
             await redis_client.ping()
             set_redis_client(redis_client)
             app.state.redis = redis_client
-        except Exception:
+        except Exception as exc:
+            logger.warning("Redis unavailable, proceeding without cache: %s", exc)
             set_redis_client(None)
 
+        jwt_generator = JwtTokenGenerator(settings)
+
+        async def _run_daily_snapshot() -> None:
+            """Take a daily performance snapshot for all funds using a service JWT."""
+            token = jwt_generator.generate()
+            try:
+                async with database.get_session() as session:
+                    fund_repo = InvestmentFundRepository(session)
+                    position_repo = ClientFundPositionRepository(session)
+                    tx_repo = ClientFundTransactionRepository(session)
+                    order = OrderClient(settings, http_client)
+                    valuation = FundValuationService(fund_repo, position_repo, tx_repo, order, redis_client, settings.redis_ttl_seconds)
+                    perf_repo = FundPerformanceRepository(session)
+                    perf_svc = FundPerformanceService(fund_repo, perf_repo, valuation)
+                    await perf_svc.take_daily_snapshot(bearer_token=token)
+            except Exception as exc:
+                logger.error("Daily snapshot job failed: %s", exc)
+
+        async def _run_poll_liquidations() -> None:
+            """Poll pending liquidation transactions and complete any that now have sufficient liquidity."""
+            token = jwt_generator.generate()
+            try:
+                async with database.get_session() as session:
+                    fund_repo = InvestmentFundRepository(session)
+                    tx_repo = ClientFundTransactionRepository(session)
+                    position_repo = ClientFundPositionRepository(session)
+                    banking = BankingClient(settings, http_client, jwt_generator)
+                    order = OrderClient(settings, http_client)
+                    liquidation_svc = FundLiquidationService(fund_repo, tx_repo, position_repo, banking, order)
+                    await liquidation_svc.poll_pending_liquidations(token)
+            except Exception as exc:
+                logger.error("Poll liquidations job failed: %s", exc)
+
         scheduler = AsyncIOScheduler()
-        scheduler.add_job(_noop_snapshot, CronTrigger(hour=0, minute=5), id="daily_snapshot", replace_existing=True)
+        scheduler.add_job(_run_daily_snapshot, CronTrigger(hour=0, minute=5), id="daily_snapshot", replace_existing=True)
+        scheduler.add_job(_run_poll_liquidations, IntervalTrigger(minutes=5), id="poll_liquidations", replace_existing=True)
         scheduler.start()
         app.state.scheduler = scheduler
 
@@ -95,11 +144,6 @@ def create_app() -> FastAPI:
         return {"status": "ok", "service": "investment-fund-service"}
 
     return app
-
-
-async def _noop_snapshot() -> None:
-    """Placeholder scheduler job; in production wire to FundPerformanceService.take_daily_snapshot."""
-    pass
 
 
 if __name__ == "__main__":

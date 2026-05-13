@@ -36,7 +36,8 @@ class BankingClient:
 
     async def transfer(self, from_account_number: str, to_account_number: str, amount: Decimal, commission: Decimal, client_id: int) -> Dict[str, Any]:
         """Execute a transfer between two accounts; returns updated balance response."""
-        payload = {"fromAccountNumber": from_account_number, "toAccountNumber": to_account_number, "fromAmount": str(amount), "toAmount": str(amount), "commission": str(commission), "clientId": client_id}
+        to_amount = amount - commission
+        payload = {"fromAccountNumber": from_account_number, "toAccountNumber": to_account_number, "fromAmount": str(amount), "toAmount": str(to_amount), "commission": str(commission), "clientId": client_id}
         response = await self._http.post(f"{self._base_url}/internal/accounts/transaction", json=payload, headers=self._headers())
         response.raise_for_status()
         return response.json()

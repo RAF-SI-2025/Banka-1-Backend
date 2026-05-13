@@ -1,7 +1,7 @@
 """Service for investment fund CRUD operations."""
 
 from datetime import date
-from typing import List
+from typing import List, Optional
 
 from fastapi import HTTPException
 
@@ -37,9 +37,9 @@ class InvestmentFundService:
         fund = InvestmentFund(naziv=request.naziv, opis=request.opis, minimalni_ulog=request.minimalni_ulog, menadzer_id=request.menadzer_id, account_id=int(account_id), datum_kreiranja=date.today(), likvidna_sredstva=0)
         return await self._fund_repo.save(fund)
 
-    async def list_funds(self) -> List[InvestmentFund]:
-        """Return all investment funds."""
-        return await self._fund_repo.find_all()
+    async def list_funds(self, name_contains: Optional[str] = None, manager_id: Optional[int] = None, sort_by: Optional[str] = None, sort_order: str = "asc") -> List[InvestmentFund]:
+        """Return investment funds with optional filtering and sorting."""
+        return await self._fund_repo.find_all(name_contains=name_contains, manager_id=manager_id, sort_by=sort_by, sort_order=sort_order)
 
     async def get_fund(self, fund_id: int) -> InvestmentFund:
         """Return a single fund by ID, raising 404 if not found."""

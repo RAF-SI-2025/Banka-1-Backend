@@ -26,9 +26,26 @@ class InvestmentFundRepository:
         result = await self._session.execute(select(InvestmentFund).where(InvestmentFund.naziv == naziv))
         return result.scalar_one_or_none()
 
-    async def find_all(self) -> List[InvestmentFund]:
-        """Return all investment funds ordered by creation date descending."""
-        result = await self._session.execute(select(InvestmentFund).order_by(InvestmentFund.datum_kreiranja.desc()))
+    async def find_by_manager_id(self, manager_id: int) -> List[InvestmentFund]:
+        """Return all funds managed by the given supervisor."""
+        result = await self._session.execute(select(InvestmentFund).where(InvestmentFund.menadzer_id == manager_id))
+        return list(result.scalars().all())
+
+    async def find_all(self, name_contains: Optional[str] = None, manager_id: Optional[int] = None, sort_by: Optional[str] = None, sort_order: str = "asc") -> List[InvestmentFund]:
+        """Return investment funds with optional filtering and sorting."""
+        stmt = select(InvestmentFund)
+        if name_contains:
+            stmt = stmt.where(InvestmentFund.naziv.ilike(f"%{name_contains}%"))
+        if manager_id is not None:
+            stmt = stmt.where(InvestmentFund.menadzer_id == manager_id)
+        sort_col = {
+            "naziv": InvestmentFund.naziv,
+            "minimalni_ulog": InvestmentFund.minimalni_ulog,
+            "likvidna_sredstva": InvestmentFund.likvidna_sredstva,
+            "datum_kreiranja": InvestmentFund.datum_kreiranja,
+        }.get(sort_by, InvestmentFund.datum_kreiranja)
+        stmt = stmt.order_by(sort_col.asc() if sort_order == "asc" else sort_col.desc())
+        result = await self._session.execute(stmt)
         return list(result.scalars().all())
 
     async def save(self, fund: InvestmentFund) -> InvestmentFund:

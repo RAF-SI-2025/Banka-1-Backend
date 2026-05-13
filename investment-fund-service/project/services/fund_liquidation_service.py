@@ -1,5 +1,6 @@
 """SAGA service for liquidating fund securities to cover large redemptions."""
 
+import logging
 from decimal import Decimal
 from typing import List
 
@@ -10,6 +11,8 @@ from project.models.investment_fund import InvestmentFund
 from project.repositories.client_fund_position_repository import ClientFundPositionRepository
 from project.repositories.client_fund_transaction_repository import ClientFundTransactionRepository
 from project.repositories.investment_fund_repository import InvestmentFundRepository
+
+logger = logging.getLogger(__name__)
 
 
 class FundLiquidationService:
@@ -27,13 +30,20 @@ class FundLiquidationService:
         """Place FIFO MARKET SELL orders to cover the delta and leave the tx PENDING until filled."""
         delta = amount_needed - fund.likvidna_sredstva
         target = delta * Decimal("1.05")
+        logger.info("Starting liquidation for fund %s: need %s, selling securities worth ~%s", fund.id, amount_needed, target)
         await self._sell_securities_fifo(fund, target, bearer_token)
+        logger.warning(
+            "LIQUIDATION_PENDING fund_id=%s tx_id=%s klijent_id=%s amount=%s destination_account_id=%s — "
+            "sell orders placed; client will receive payment once orders fill and poll_pending_liquidations completes the transfer.",
+            fund.id, tx_id, klijent_id, amount_needed, destination_account_id,
+        )
 
     async def _sell_securities_fifo(self, fund: InvestmentFund, target: Decimal, bearer_token: str) -> None:
         """Iterate fund holdings in FIFO order, placing MARKET SELL orders until target is covered."""
         try:
             holdings = await self._order_client.get_fund_portfolio(fund.id, bearer_token)
-        except Exception:
+        except Exception as exc:
+            logger.error("Failed to fetch portfolio for fund %s during liquidation: %s", fund.id, exc)
             return
         sorted_holdings = sorted(holdings, key=lambda h: h.get("acquisitionDate", ""))
         cumulative = Decimal("0")
@@ -48,26 +58,32 @@ class FundLiquidationService:
             try:
                 await self._order_client.create_sell_order(int(listing_id), quantity, fund.account_id, bearer_token)
                 cumulative += current_price * quantity
-            except Exception:
+            except Exception as exc:
+                logger.error("Sell order failed for listing %s in fund %s: %s", listing_id, fund.id, exc)
                 continue
 
     async def complete_liquidation(self, fund_id: int, tx_id: int, destination_account_id: int, amount: Decimal, klijent_id: int, bearer_token: str) -> None:
         """Complete the SAGA by executing the final transfer to the client and marking the tx COMPLETED."""
         fund = await self._fund_repo.find_by_id(fund_id)
         if not fund or fund.likvidna_sredstva < amount:
+            logger.warning("complete_liquidation: fund %s has insufficient liquidity (%s < %s), skipping", fund_id, fund.likvidna_sredstva if fund else "N/A", amount)
             return
+        tx = await self._tx_repo.find_by_id(tx_id)
+        commission = (tx.iznos * tx.commission_rate) if tx else Decimal("0")
         fund_details = await self._banking.get_account_details(fund.account_id)
         dest_details = await self._banking.get_account_details(destination_account_id)
         fund_number = fund_details.get("accountNumber") or fund_details.get("account_number")
         dest_number = dest_details.get("accountNumber") or dest_details.get("account_number")
         try:
-            await self._banking.transfer(fund_number, dest_number, amount, Decimal("0"), klijent_id)
+            await self._banking.transfer(fund_number, dest_number, amount, commission, klijent_id)
             await self._fund_repo.update_likvidna_sredstva(fund_id, -amount)
             position = await self._position_repo.find_by_klijent_and_fund(klijent_id, fund_id)
             if position:
                 await self._position_repo.upsert(klijent_id, fund_id, -amount)
             await self._tx_repo.update_status(tx_id, TransactionStatus.COMPLETED)
-        except Exception:
+            logger.info("Liquidation completed for fund %s tx %s klijent %s amount %s", fund_id, tx_id, klijent_id, amount)
+        except Exception as exc:
+            logger.error("complete_liquidation transfer failed for fund %s tx %s: %s", fund_id, tx_id, exc)
             await self._tx_repo.update_status(tx_id, TransactionStatus.FAILED)
 
     async def poll_pending_liquidations(self, bearer_token: str) -> None:

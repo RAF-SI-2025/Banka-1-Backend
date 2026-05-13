@@ -104,9 +104,9 @@ def get_investment_fund_service(fund_repo: InvestmentFundRepository = Depends(ge
     return InvestmentFundService(fund_repo, banking, employee)
 
 
-def get_fund_valuation_service(fund_repo: InvestmentFundRepository = Depends(get_investment_fund_repository), position_repo: ClientFundPositionRepository = Depends(get_client_fund_position_repository), tx_repo: ClientFundTransactionRepository = Depends(get_client_fund_transaction_repository), order: OrderClient = Depends(get_order_client)) -> FundValuationService:
-    """Construct the FundValuationService with its dependencies."""
-    return FundValuationService(fund_repo, position_repo, tx_repo, order, get_redis())
+def get_fund_valuation_service(settings: Settings = Depends(get_settings_dep), fund_repo: InvestmentFundRepository = Depends(get_investment_fund_repository), position_repo: ClientFundPositionRepository = Depends(get_client_fund_position_repository), tx_repo: ClientFundTransactionRepository = Depends(get_client_fund_transaction_repository), order: OrderClient = Depends(get_order_client)) -> FundValuationService:
+    """Construct the FundValuationService with its dependencies, passing the configured cache TTL."""
+    return FundValuationService(fund_repo, position_repo, tx_repo, order, get_redis(), ttl_seconds=settings.redis_ttl_seconds)
 
 
 def get_fund_liquidation_service(fund_repo: InvestmentFundRepository = Depends(get_investment_fund_repository), tx_repo: ClientFundTransactionRepository = Depends(get_client_fund_transaction_repository), position_repo: ClientFundPositionRepository = Depends(get_client_fund_position_repository), banking: BankingClient = Depends(get_banking_client), order: OrderClient = Depends(get_order_client)) -> FundLiquidationService:
@@ -119,9 +119,9 @@ def get_fund_investment_service(fund_repo: InvestmentFundRepository = Depends(ge
     return FundInvestmentService(fund_repo, tx_repo, position_repo, banking)
 
 
-def get_fund_redemption_service(fund_repo: InvestmentFundRepository = Depends(get_investment_fund_repository), tx_repo: ClientFundTransactionRepository = Depends(get_client_fund_transaction_repository), position_repo: ClientFundPositionRepository = Depends(get_client_fund_position_repository), banking: BankingClient = Depends(get_banking_client), liquidation: FundLiquidationService = Depends(get_fund_liquidation_service)) -> FundRedemptionService:
+def get_fund_redemption_service(fund_repo: InvestmentFundRepository = Depends(get_investment_fund_repository), tx_repo: ClientFundTransactionRepository = Depends(get_client_fund_transaction_repository), position_repo: ClientFundPositionRepository = Depends(get_client_fund_position_repository), banking: BankingClient = Depends(get_banking_client), liquidation: FundLiquidationService = Depends(get_fund_liquidation_service), valuation: FundValuationService = Depends(get_fund_valuation_service)) -> FundRedemptionService:
     """Construct the FundRedemptionService with its dependencies."""
-    return FundRedemptionService(fund_repo, tx_repo, position_repo, banking, liquidation)
+    return FundRedemptionService(fund_repo, tx_repo, position_repo, banking, liquidation, valuation)
 
 
 def get_fund_performance_service(fund_repo: InvestmentFundRepository = Depends(get_investment_fund_repository), perf_repo: FundPerformanceRepository = Depends(get_fund_performance_repository), valuation: FundValuationService = Depends(get_fund_valuation_service)) -> FundPerformanceService:

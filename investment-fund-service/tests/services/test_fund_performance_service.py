@@ -2,12 +2,11 @@
 
 from datetime import date, timedelta
 from decimal import Decimal
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from project.enums.performance_period import PerformancePeriod
-from project.models.fund_performance_snapshot import FundPerformanceSnapshot
 from project.services.fund_performance_service import FundPerformanceService
 
 
@@ -20,38 +19,36 @@ class TestTakeDailySnapshot:
     """Tests for FundPerformanceService.take_daily_snapshot."""
 
     async def test_snapshot_saved_for_each_fund(self, mock_fund_repo, mock_perf_repo, fund):
-        """take_daily_snapshot persists one snapshot per fund returned by the repository."""
+        """take_daily_snapshot persists one upsert per fund returned by the repository."""
         valuation = MagicMock()
         valuation.compute_vrednost_fonda = AsyncMock(return_value=Decimal("60000.00"))
         valuation.compute_profit = AsyncMock(return_value=Decimal("10000.00"))
         svc = _make_svc(mock_fund_repo, mock_perf_repo, valuation)
         await svc.take_daily_snapshot()
-        mock_perf_repo.save.assert_awaited_once()
+        mock_perf_repo.upsert_snapshot.assert_awaited_once()
 
     async def test_snapshot_contains_correct_values(self, mock_fund_repo, mock_perf_repo, fund):
         """take_daily_snapshot stores the correct vrednost_fonda, profit, and likvidna_sredstva."""
         valuation = MagicMock()
         valuation.compute_vrednost_fonda = AsyncMock(return_value=Decimal("60000.00"))
         valuation.compute_profit = AsyncMock(return_value=Decimal("10000.00"))
-        saved_snapshots = []
-        mock_perf_repo.save = AsyncMock(side_effect=lambda s: saved_snapshots.append(s) or s)
         svc = _make_svc(mock_fund_repo, mock_perf_repo, valuation)
         await svc.take_daily_snapshot()
-        snap = saved_snapshots[0]
-        assert snap.vrednost_fonda == Decimal("60000.00")
-        assert snap.profit == Decimal("10000.00")
-        assert snap.likvidna_sredstva == fund.likvidna_sredstva
+        # upsert_snapshot(fund_id, date, vrednost_fonda, profit, likvidna_sredstva)
+        call_args = mock_perf_repo.upsert_snapshot.call_args.args
+        assert call_args[2] == Decimal("60000.00")
+        assert call_args[3] == Decimal("10000.00")
+        assert call_args[4] == fund.likvidna_sredstva
 
     async def test_snapshot_date_is_today(self, mock_fund_repo, mock_perf_repo):
         """take_daily_snapshot records today's date on each snapshot."""
         valuation = MagicMock()
         valuation.compute_vrednost_fonda = AsyncMock(return_value=Decimal("10000.00"))
         valuation.compute_profit = AsyncMock(return_value=Decimal("0.00"))
-        saved = []
-        mock_perf_repo.save = AsyncMock(side_effect=lambda s: saved.append(s) or s)
         svc = _make_svc(mock_fund_repo, mock_perf_repo, valuation)
         await svc.take_daily_snapshot()
-        assert saved[0].date == date.today()
+        call_args = mock_perf_repo.upsert_snapshot.call_args.args
+        assert call_args[1] == date.today()
 
     async def test_snapshot_continues_when_one_fund_raises(self, mock_fund_repo, mock_perf_repo, fund):
         """take_daily_snapshot skips a failing fund and continues to the next one."""
@@ -64,15 +61,15 @@ class TestTakeDailySnapshot:
         valuation.compute_profit = AsyncMock(return_value=Decimal("0.00"))
         svc = _make_svc(mock_fund_repo, mock_perf_repo, valuation)
         await svc.take_daily_snapshot()
-        mock_perf_repo.save.assert_awaited_once()
+        mock_perf_repo.upsert_snapshot.assert_awaited_once()
 
     async def test_snapshot_no_funds_saves_nothing(self, mock_fund_repo, mock_perf_repo):
-        """take_daily_snapshot does not call save when there are no funds."""
+        """take_daily_snapshot does not call upsert_snapshot when there are no funds."""
         mock_fund_repo.find_all = AsyncMock(return_value=[])
         valuation = MagicMock()
         svc = _make_svc(mock_fund_repo, mock_perf_repo, valuation)
         await svc.take_daily_snapshot()
-        mock_perf_repo.save.assert_not_awaited()
+        mock_perf_repo.upsert_snapshot.assert_not_awaited()
 
 
 class TestGetPerformance:

@@ -1,5 +1,6 @@
 """Router exposing client fund position read endpoints."""
 
+from decimal import Decimal
 from typing import Annotated, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -33,10 +34,7 @@ class PositionRouter:
         if is_privileged and fund_id is not None:
             positions = await position_repo.find_by_fund_id(fund_id)
         elif is_privileged:
-            positions = []
-            funds = await fund_repo.find_all()
-            for fund in funds:
-                positions.extend(await position_repo.find_by_fund_id(fund.id))
+            positions = await position_repo.find_all()
         else:
             positions = await position_repo.find_by_klijent_id(token.id)
         return [await self._build_response(p, fund_repo, valuation, bearer) for p in positions]
@@ -55,7 +53,10 @@ class PositionRouter:
     async def _build_response(self, position, fund_repo: InvestmentFundRepository, valuation: FundValuationService, bearer: str) -> PositionResponse:
         """Compute derived fields and return a PositionResponse for the given position."""
         fund = await fund_repo.find_by_id(position.fund_id)
+        if fund is None:
+            return PositionResponse(id=position.id, klijent_id=position.klijent_id, fund_id=position.fund_id, ukupan_ulozeni_iznos=position.ukupan_ulozeni_iznos, datum_poslednje_promene=position.datum_poslednje_promene, procenat_fonda=Decimal("0"), trenutna_vrednost_pozicije=Decimal("0"), ostvareni_profit=-position.ukupan_ulozeni_iznos)
         vrednost_fonda = await valuation.get_cached_or_compute_vrednost(position.fund_id, fund, bearer)
         procenat = await valuation.compute_procenat_fonda(position.klijent_id, position.fund_id)
         trenutna_vrednost = procenat * vrednost_fonda
-        return PositionResponse(id=position.id, klijent_id=position.klijent_id, fund_id=position.fund_id, ukupan_ulozeni_iznos=position.ukupan_ulozeni_iznos, datum_poslednje_promene=position.datum_poslednje_promene, procenat_fonda=procenat, trenutna_vrednost_pozicije=trenutna_vrednost)
+        ostvareni_profit = trenutna_vrednost - position.ukupan_ulozeni_iznos
+        return PositionResponse(id=position.id, klijent_id=position.klijent_id, fund_id=position.fund_id, fund_naziv=fund.naziv, fund_opis=fund.opis, ukupan_ulozeni_iznos=position.ukupan_ulozeni_iznos, datum_poslednje_promene=position.datum_poslednje_promene, procenat_fonda=procenat, trenutna_vrednost_pozicije=trenutna_vrednost, ostvareni_profit=ostvareni_profit, vrednost_fonda=vrednost_fonda)

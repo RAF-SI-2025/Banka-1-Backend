@@ -113,6 +113,7 @@ def mock_position_repo(position) -> MagicMock:
     repo.find_by_id = AsyncMock(return_value=position)
     repo.find_by_klijent_and_fund = AsyncMock(return_value=position)
     repo.find_by_fund_id = AsyncMock(return_value=[position])
+    repo.find_all = AsyncMock(return_value=[position])
     repo.sum_ulozeni_iznos_by_fund = AsyncMock(return_value=Decimal("5000.00"))
     repo.upsert = AsyncMock(side_effect=lambda ki, fi, d: position)
     repo.save = AsyncMock(side_effect=lambda p: p)
@@ -125,6 +126,7 @@ def mock_perf_repo(snapshot) -> MagicMock:
     repo = MagicMock()
     repo.find_by_fund_and_period = AsyncMock(return_value=[snapshot])
     repo.save = AsyncMock(side_effect=lambda s: s)
+    repo.upsert_snapshot = AsyncMock(return_value=None)
     return repo
 
 
@@ -133,7 +135,7 @@ def mock_banking_client() -> MagicMock:
     """Return a mock BankingClient that succeeds on all calls."""
     client = MagicMock()
     client.create_fund_account = AsyncMock(return_value={"id": 99, "accountNumber": "1234567890123456789"})
-    client.get_account_details = AsyncMock(return_value={"id": 99, "accountNumber": "1234567890123456789"})
+    client.get_account_details = AsyncMock(return_value={"id": 99, "accountNumber": "1234567890123456789", "clientId": 42})
     client.transfer = AsyncMock(return_value={"senderBalance": "45000.00", "receiverBalance": "5000.00"})
     client.credit_account = AsyncMock(return_value=None)
     client.debit_account = AsyncMock(return_value=None)
@@ -146,6 +148,7 @@ def mock_employee_client() -> MagicMock:
     client = MagicMock()
     client.get_employee = AsyncMock(return_value={"id": 10, "role": "SUPERVISOR"})
     client.is_supervisor = AsyncMock(return_value=True)
+    client.get_all_employees = AsyncMock(return_value=[{"id": 10, "role": "SUPERVISOR", "firstName": "Test", "lastName": "Manager"}])
     return client
 
 
@@ -156,3 +159,14 @@ def mock_order_client() -> MagicMock:
     client.get_fund_portfolio = AsyncMock(return_value=[{"listingId": 5, "currentPrice": "100.00", "quantity": 100, "acquisitionDate": "2024-01-01"}])
     client.create_sell_order = AsyncMock(return_value={"id": 55, "status": "PENDING"})
     return client
+
+
+@pytest.fixture()
+def mock_valuation_service(position) -> MagicMock:
+    """Return a mock FundValuationService where current position value equals ukupan_ulozeni_iznos."""
+    svc = MagicMock()
+    svc.get_cached_or_compute_vrednost = AsyncMock(return_value=Decimal("50000.00"))
+    svc.compute_procenat_fonda = AsyncMock(return_value=Decimal("0.1"))
+    svc.compute_profit = AsyncMock(return_value=Decimal("5000.00"))
+    svc.get_fund_holdings = AsyncMock(return_value=[])
+    return svc

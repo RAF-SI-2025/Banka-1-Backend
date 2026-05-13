@@ -47,28 +47,36 @@ class TestComputeVrednostFonda:
 
 
 class TestComputeProfit:
-    """Tests for FundValuationService.compute_profit."""
+    """Tests for FundValuationService.compute_profit (uses positions, not inflow transactions)."""
 
-    async def test_profit_is_value_minus_invested(self, mock_fund_repo, mock_position_repo, mock_tx_repo, mock_order_client, fund):
-        """profit = vrednost_fonda - total invested across all clients."""
-        mock_tx_repo.sum_inflows_by_fund = AsyncMock(return_value=Decimal("40000.00"))
+    async def test_profit_is_value_minus_net_invested(self, mock_fund_repo, mock_position_repo, mock_tx_repo, mock_order_client, fund):
+        """profit = vrednost_fonda - total net invested (from positions, not raw inflow transactions)."""
+        mock_position_repo.sum_ulozeni_iznos_by_fund = AsyncMock(return_value=Decimal("40000.00"))
         svc = _make_svc(mock_fund_repo, mock_position_repo, mock_tx_repo, mock_order_client)
         result = await svc.compute_profit(fund, Decimal("60000.00"))
         assert result == Decimal("20000.00")
 
     async def test_profit_can_be_negative(self, mock_fund_repo, mock_position_repo, mock_tx_repo, mock_order_client, fund):
         """profit is negative when the fund has lost value relative to total invested."""
-        mock_tx_repo.sum_inflows_by_fund = AsyncMock(return_value=Decimal("70000.00"))
+        mock_position_repo.sum_ulozeni_iznos_by_fund = AsyncMock(return_value=Decimal("70000.00"))
         svc = _make_svc(mock_fund_repo, mock_position_repo, mock_tx_repo, mock_order_client)
         result = await svc.compute_profit(fund, Decimal("60000.00"))
         assert result == Decimal("-10000.00")
 
     async def test_profit_zero_when_value_equals_invested(self, mock_fund_repo, mock_position_repo, mock_tx_repo, mock_order_client, fund):
         """profit is exactly zero when the fund value equals total invested."""
-        mock_tx_repo.sum_inflows_by_fund = AsyncMock(return_value=Decimal("60000.00"))
+        mock_position_repo.sum_ulozeni_iznos_by_fund = AsyncMock(return_value=Decimal("60000.00"))
         svc = _make_svc(mock_fund_repo, mock_position_repo, mock_tx_repo, mock_order_client)
         result = await svc.compute_profit(fund, Decimal("60000.00"))
         assert result == Decimal("0")
+
+    async def test_profit_reflects_net_invested_after_redemptions(self, mock_fund_repo, mock_position_repo, mock_tx_repo, mock_order_client, fund):
+        """profit uses current net position balances, not all-time inflow totals."""
+        mock_position_repo.sum_ulozeni_iznos_by_fund = AsyncMock(return_value=Decimal("6000.00"))
+        mock_tx_repo.sum_inflows_by_fund = AsyncMock(return_value=Decimal("10000.00"))
+        svc = _make_svc(mock_fund_repo, mock_position_repo, mock_tx_repo, mock_order_client)
+        result = await svc.compute_profit(fund, Decimal("60000.00"))
+        assert result == Decimal("54000.00")
 
 
 class TestComputeProcenatFonda:

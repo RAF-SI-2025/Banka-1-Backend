@@ -1,6 +1,6 @@
 """ORM model for the ClientFundTransaction entity."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional
 
@@ -21,7 +21,8 @@ class ClientFundTransaction(Base):
     fund_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("investment_funds.id"), nullable=False, index=True)
     iznos: Mapped[Decimal] = mapped_column(Numeric(19, 4), nullable=False)
     status: Mapped[TransactionStatus] = mapped_column(SAEnum(TransactionStatus, name="transactionstatus"), nullable=False)
-    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
     is_inflow: Mapped[bool] = mapped_column(Boolean, nullable=False)
     source_account_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     idempotency_key: Mapped[Optional[str]] = mapped_column(String(64), unique=True, nullable=True, index=True)
+    commission_rate: Mapped[Decimal] = mapped_column(Numeric(10, 6), nullable=False, default=Decimal("0"))

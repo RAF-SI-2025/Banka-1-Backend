@@ -11,12 +11,16 @@ from project.schemas.redeem_request import RedeemRequest
 from project.services.fund_redemption_service import FundRedemptionService
 
 
-def _make_svc(fund_repo, tx_repo, position_repo, banking_client, liquidation_service=None) -> FundRedemptionService:
-    """Construct FundRedemptionService with a default no-op liquidation service if not provided."""
+def _make_svc(fund_repo, tx_repo, position_repo, banking_client, liquidation_service=None, valuation_service=None) -> FundRedemptionService:
+    """Construct FundRedemptionService with default no-op mocks for optional dependencies."""
     if liquidation_service is None:
         liquidation_service = MagicMock()
         liquidation_service.start_liquidation = AsyncMock(return_value=None)
-    return FundRedemptionService(fund_repo, tx_repo, position_repo, banking_client, liquidation_service)
+    if valuation_service is None:
+        valuation_service = MagicMock()
+        valuation_service.get_cached_or_compute_vrednost = AsyncMock(return_value=Decimal("50000.00"))
+        valuation_service.compute_procenat_fonda = AsyncMock(return_value=Decimal("0.1"))
+    return FundRedemptionService(fund_repo, tx_repo, position_repo, banking_client, liquidation_service, valuation_service)
 
 
 class TestFundRedemptionServiceCoveredLiquidity:
@@ -116,9 +120,12 @@ class TestFundRedemptionServiceValidation:
         assert exc_info.value.status_code == 400
 
     async def test_redeem_raises_400_when_insufficient_position(self, mock_fund_repo, mock_tx_repo, mock_position_repo, mock_banking_client, position):
-        """redeem raises 400 when the client requests more than their invested amount."""
+        """redeem raises 400 when current market value is less than the requested amount."""
         position.ukupan_ulozeni_iznos = Decimal("500.00")
-        svc = _make_svc(mock_fund_repo, mock_tx_repo, mock_position_repo, mock_banking_client)
+        valuation_svc = MagicMock()
+        valuation_svc.get_cached_or_compute_vrednost = AsyncMock(return_value=Decimal("5000.00"))
+        valuation_svc.compute_procenat_fonda = AsyncMock(return_value=Decimal("0.1"))
+        svc = _make_svc(mock_fund_repo, mock_tx_repo, mock_position_repo, mock_banking_client, valuation_service=valuation_svc)
         with pytest.raises(HTTPException) as exc_info:
             await svc.redeem(1, 42, RedeemRequest(iznos=Decimal("1000.00"), destination_account_id=7), "token")
         assert exc_info.value.status_code == 400

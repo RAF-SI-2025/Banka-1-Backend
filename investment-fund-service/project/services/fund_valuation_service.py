@@ -1,7 +1,8 @@
 """Service for computing derived fund valuation fields with Redis caching."""
 
+import logging
 from decimal import Decimal
-from typing import Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import redis.asyncio as aioredis
 
@@ -11,30 +12,41 @@ from project.repositories.client_fund_position_repository import ClientFundPosit
 from project.repositories.client_fund_transaction_repository import ClientFundTransactionRepository
 from project.repositories.investment_fund_repository import InvestmentFundRepository
 
+logger = logging.getLogger(__name__)
+
 
 class FundValuationService:
-    """Computes runtime-only fund metrics; caches vrednost_fonda in Redis for 60 s."""
+    """Computes runtime-only fund metrics; caches vrednost_fonda in Redis."""
 
-    def __init__(self, fund_repo: InvestmentFundRepository, position_repo: ClientFundPositionRepository, tx_repo: ClientFundTransactionRepository, order_client: OrderClient, redis_client: Optional[aioredis.Redis]) -> None:
-        """Initialise with repositories, the order client, and an optional Redis connection."""
+    def __init__(self, fund_repo: InvestmentFundRepository, position_repo: ClientFundPositionRepository, tx_repo: ClientFundTransactionRepository, order_client: OrderClient, redis_client: Optional[aioredis.Redis], ttl_seconds: int = 60) -> None:
+        """Initialise with repositories, the order client, Redis connection, and cache TTL."""
         self._fund_repo = fund_repo
         self._position_repo = position_repo
         self._tx_repo = tx_repo
         self._order_client = order_client
         self._redis = redis_client
+        self._ttl = ttl_seconds
+
+    async def get_fund_holdings(self, fund_id: int, bearer_token: str) -> List[Dict[str, Any]]:
+        """Return the raw holdings list from the order-service for the given fund."""
+        try:
+            return await self._order_client.get_fund_portfolio(fund_id, bearer_token)
+        except Exception as exc:
+            logger.warning("order-service portfolio fetch failed for fund %s: %s", fund_id, exc)
+            return []
 
     async def compute_vrednost_fonda(self, fund: InvestmentFund, bearer_token: str) -> Decimal:
         """Return total fund value = liquid assets + market value of all held securities."""
-        try:
-            holdings = await self._order_client.get_fund_portfolio(fund.id, bearer_token)
-            securities_value = sum(Decimal(str(h.get("currentPrice", 0))) * Decimal(str(h.get("quantity", 0))) for h in holdings)
-        except Exception:
-            securities_value = Decimal("0")
+        holdings = await self.get_fund_holdings(fund.id, bearer_token)
+        securities_value = sum(
+            Decimal(str(h.get("currentPrice", 0))) * Decimal(str(h.get("quantity", 0)))
+            for h in holdings
+        )
         return fund.likvidna_sredstva + securities_value
 
     async def compute_profit(self, fund: InvestmentFund, vrednost_fonda: Decimal) -> Decimal:
-        """Return profit = fund value minus total of all completed client inflows."""
-        total_invested = await self._tx_repo.sum_inflows_by_fund(fund.id)
+        """Return profit = fund value minus sum of all current net invested amounts from positions."""
+        total_invested = await self._position_repo.sum_ulozeni_iznos_by_fund(fund.id)
         return vrednost_fonda - total_invested
 
     async def compute_procenat_fonda(self, klijent_id: int, fund_id: int) -> Decimal:
@@ -64,15 +76,14 @@ class FundValuationService:
                 cached = await self._redis.get(cache_key)
                 if cached:
                     return Decimal(cached.decode())
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Redis get failed for fund %s: %s", fund_id, exc)
         vrednost = await self.compute_vrednost_fonda(fund, bearer_token)
         if self._redis:
             try:
-                ttl = 60
-                await self._redis.set(cache_key, str(vrednost), ex=ttl)
-            except Exception:
-                pass
+                await self._redis.set(cache_key, str(vrednost), ex=self._ttl)
+            except Exception as exc:
+                logger.warning("Redis set failed for fund %s: %s", fund_id, exc)
         return vrednost
 
     async def invalidate_cache(self, fund_id: int) -> None:
@@ -80,5 +91,5 @@ class FundValuationService:
         if self._redis:
             try:
                 await self._redis.delete(f"fund:valuation:{fund_id}")
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Redis delete failed for fund %s: %s", fund_id, exc)

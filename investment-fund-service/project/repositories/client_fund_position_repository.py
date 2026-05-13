@@ -1,6 +1,6 @@
 """Repository for ClientFundPosition database operations."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import List, Optional
 
@@ -41,6 +41,11 @@ class ClientFundPositionRepository:
         result = await self._session.execute(select(ClientFundPosition).where(ClientFundPosition.fund_id == fund_id))
         return list(result.scalars().all())
 
+    async def find_all(self) -> List[ClientFundPosition]:
+        """Return all client positions across all funds."""
+        result = await self._session.execute(select(ClientFundPosition))
+        return list(result.scalars().all())
+
     async def sum_ulozeni_iznos_by_fund(self, fund_id: int) -> Decimal:
         """Return the total invested amount across all clients in the fund."""
         result = await self._session.execute(
@@ -51,7 +56,7 @@ class ClientFundPositionRepository:
 
     async def upsert(self, klijent_id: int, fund_id: int, delta: Decimal) -> ClientFundPosition:
         """Insert or update the position, adding delta to ukupan_ulozeni_iznos atomically."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         stmt = (
             pg_insert(ClientFundPosition)
             .values(klijent_id=klijent_id, fund_id=fund_id, ukupan_ulozeni_iznos=delta, datum_poslednje_promene=now)

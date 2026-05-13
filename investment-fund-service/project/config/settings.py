@@ -23,8 +23,10 @@ class Settings(BasicSettings):
     employee_service_url: str = "http://employee-service:8081"
     order_service_url: str = "http://order-service:8088"
 
-    jwt_secret: str = "OvoJeNekaDugackaTajnaSifraZaJwtKojuNeStavljamoUProperties"
+    jwt_secret: str
     jwt_algorithm: str = "HS256"
+
+    commission_rate: float = 0.005
 
     host: str = "0.0.0.0"
     port: int = 8092

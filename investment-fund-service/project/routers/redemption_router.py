@@ -4,7 +4,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
 
-from project.dependencies import get_fund_redemption_service, require_client_or_supervisor
+from project.dependencies import get_fund_redemption_service, get_settings_dep, require_client_or_supervisor
+from project.config.settings import Settings
 from project.middleware.token_data import TokenData
 from project.schemas.redeem_request import RedeemRequest
 from project.schemas.redeem_response import RedeemResponse
@@ -24,8 +25,10 @@ class RedemptionRouter:
         """Return the underlying APIRouter instance."""
         return self._router
 
-    async def redeem(self, fund_id: int, request: RedeemRequest, service: Annotated[FundRedemptionService, Depends(get_fund_redemption_service)], token: Annotated[TokenData, Depends(require_client_or_supervisor)], raw_request: Request) -> RedeemResponse:
+    async def redeem(self, fund_id: int, request: RedeemRequest, service: Annotated[FundRedemptionService, Depends(get_fund_redemption_service)], token: Annotated[TokenData, Depends(require_client_or_supervisor)], settings: Annotated[Settings, Depends(get_settings_dep)], raw_request: Request) -> RedeemResponse:
         """Withdraw the requested amount from the fund to a client account; may trigger SAGA."""
         bearer = raw_request.state.raw_token
-        tx, liquidation_started = await service.redeem(fund_id, token.id, request, bearer)
+        is_supervisor = any(r in token.roles for r in ("SUPERVISOR", "ADMIN"))
+        commission_rate = 0.0 if is_supervisor else settings.commission_rate
+        tx, liquidation_started = await service.redeem(fund_id, token.id, request, bearer, is_supervisor=is_supervisor, commission_rate=commission_rate)
         return RedeemResponse(transaction_id=tx.id, status=tx.status, iznos=tx.iznos, fund_id=tx.fund_id, klijent_id=tx.klijent_id, liquidation_started=liquidation_started, timestamp=tx.timestamp)

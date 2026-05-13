@@ -25,7 +25,8 @@ class InvestmentRouter:
         return self._router
 
     async def invest(self, fund_id: int, request: InvestRequest, service: Annotated[FundInvestmentService, Depends(get_fund_investment_service)], token: Annotated[TokenData, Depends(require_client_or_supervisor)], raw_request: Request) -> InvestResponse:
-        """Deposit the requested amount from a client account into the fund."""
+        """Deposit the requested amount from a client or bank account into the fund."""
         bearer = raw_request.state.raw_token
-        tx = await service.invest(fund_id, token.id, request, bearer)
+        is_supervisor = any(r in token.roles for r in ("SUPERVISOR", "ADMIN"))
+        tx = await service.invest(fund_id, token.id, request, bearer, is_supervisor=is_supervisor)
         return InvestResponse(transaction_id=tx.id, status=tx.status, iznos=tx.iznos, fund_id=tx.fund_id, klijent_id=tx.klijent_id, timestamp=tx.timestamp)

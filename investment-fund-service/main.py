@@ -62,7 +62,7 @@ def create_app() -> FastAPI:
             await redis_client.aclose()
         await database.disconnect()
 
-    app = FastAPI(title="Investment Fund Service", version="1.0.0", description="Manages investment funds, client positions, and performance tracking.", lifespan=lifespan)
+    app = FastAPI(title="Investment Fund Service", version="1.0.0", description="Manages investment funds, client positions, and performance tracking.", lifespan=lifespan, root_path=settings.root_path)
 
     app.add_middleware(AuthMiddleware, settings=settings)
     HttpExceptionHandler(app).register()

@@ -45,6 +45,20 @@ services:
       timeout: 5s
       retries: 10
 
+  redis:
+    image: redis:7-alpine
+    container_name: banka_redis
+    restart: unless-stopped
+    expose:
+      - "6379"
+    networks:
+      - banka-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   otel-collector:
     image: otel/opentelemetry-collector:0.104.0
     container_name: banka_otel_collector
@@ -567,6 +581,49 @@ services:
       retries: 10
       start_period: 30s
 
+  # Investment Fund Service
+  investment-fund-service:
+    build:
+      context: ..
+      dockerfile: investment-fund-service/Dockerfile
+      args:
+        SERVER_PORT: ${INVESTMENT_FUND_SERVICE_PORT:-8092}
+    container_name: banka_investment_fund_service
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      HOST: 0.0.0.0
+      PORT: ${INVESTMENT_FUND_SERVICE_PORT:-8092}
+      DB_HOST: postgres
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${INVESTMENT_FUND_DB_NAME:-investment_fund_db}
+      DB_USER: ${INVESTMENT_FUND_DB_USER:-postgres}
+      DB_PASSWORD: ${INVESTMENT_FUND_DB_PASSWORD:-postgres}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ALGORITHM: HS256
+      BANKING_SERVICE_URL: http://banking-service:${BANKING_SERVER_PORT:-8084}
+      EMPLOYEE_SERVICE_URL: http://employee-service:${USER_SERVER_PORT:-8081}
+      ORDER_SERVICE_URL: http://order-service:${ORDER_SERVER_PORT:-8088}
+      ROOT_PATH: /funds
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    expose:
+      - "${INVESTMENT_FUND_SERVICE_PORT:-8092}"
+    networks:
+      - banka-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:${INVESTMENT_FUND_SERVICE_PORT:-8092}/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
   api-gateway:
     build:
       context: ..
@@ -586,6 +643,7 @@ services:
       NOTIFICATION_SERVICE_PORT: ${NOTIFICATION_SERVER_PORT:-8006}
       ORDER_SERVER_PORT: ${ORDER_SERVER_PORT:-8088}
       STOCK_SERVICE_PORT: ${STOCK_SERVICE_PORT:-8090}
+      INVESTMENT_FUND_SERVICE_PORT: ${INVESTMENT_FUND_SERVICE_PORT:-8092}
     depends_on:
       employee-service:
         condition: service_healthy
@@ -600,6 +658,8 @@ services:
       notification-service:
         condition: service_healthy
       order-service:
+        condition: service_healthy
+      investment-fund-service:
         condition: service_healthy
     networks:
       - banka-network

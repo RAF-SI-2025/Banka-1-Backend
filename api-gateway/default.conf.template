@@ -90,8 +90,14 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
+    # Card-service controlleri (CardManagementController/CardCreationController) su
+    # mapirani na BARE sufikse (/all, /client/{id}, /id/{cardId}/block, /account/{n},
+    # /request, /request/business) — NEMAJU /api/cards prefiks (potvrdjeno u
+    # banking-core /v3/api-docs). Zato OVDE strip-ujemo /api/cards (trailing slash na
+    # proxy_pass): /api/cards/all -> /all, /api/cards/id/5/block -> /id/5/block, itd.
+    # Ovo pokriva CEO card surface jednim blokom, a ne samo /all.
     location /api/cards/ {
-        proxy_pass http://banking_core_service;
+        proxy_pass http://banking_core_service/;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -286,6 +292,26 @@ server {
     }
     location /audit/ {
         proxy_pass http://trading_service;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Frontend (AuditLogService) zove BARE /audit-logs; backend AuditLogController je
+    # na /audit (trading-service). Ranije /audit-logs nije bio rutiran -> nginx 404
+    # BEZ CORS header-a -> browser je prijavljivao CORS gresku. Mapiramo /audit-logs
+    # na trading-service /audit; CORS header-e dodaje sam trading-service (security-lib
+    # CorsConfigurationSource, isto kao za /audit i ostale radne rute).
+    location = /audit-logs {
+        proxy_pass http://trading_service/audit$is_args$args;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    location /audit-logs/ {
+        proxy_pass http://trading_service/audit/;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

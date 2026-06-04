@@ -26,7 +26,7 @@ import java.util.NoSuchElementException;
  * Mapira ocekivane i neocekivane izuzetke na standardizovane HTTP odgovore sa {@link ErrorResponseDto} telom.
  */
 @Slf4j
-@RestControllerAdvice
+@RestControllerAdvice(basePackages = "com.banka1.clientService.controller")
 @Component("clientServiceGlobalExceptionHandler")
 public class GlobalExceptionHandler {
 

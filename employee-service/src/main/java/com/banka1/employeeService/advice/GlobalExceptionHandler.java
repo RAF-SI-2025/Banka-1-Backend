@@ -24,7 +24,7 @@ import java.util.NoSuchElementException;
  * Centralizovani hendler gresaka za sve REST kontrolere.
  * Mapira ocekivane i neocekivane izuzetke na standardizovane HTTP odgovore sa {@link ErrorResponseDto} telom.
  */
-@RestControllerAdvice
+@RestControllerAdvice(basePackages = "com.banka1.employeeService.controller")
 @Component("employeeServiceGlobalExceptionHandler")
 public class GlobalExceptionHandler {
 

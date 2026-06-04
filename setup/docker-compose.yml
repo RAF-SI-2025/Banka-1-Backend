@@ -868,7 +868,7 @@ services:
   # =========================================================================
   frontend:
     build:
-      context: ../../Banka-1-Frontendd
+      context: ../../Banka-1-Frontend-frontendNew
       dockerfile: Dockerfile
     container_name: banka_frontend
     restart: unless-stopped

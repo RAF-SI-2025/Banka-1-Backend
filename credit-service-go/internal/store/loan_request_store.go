@@ -5,15 +5,13 @@ import (
 	"errors"
 
 	"Banka1Back/credit-service-go/internal/model"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type LoanRequestStore struct {
-	db *pgxpool.Pool
+	db dbPool
 }
 
-func NewLoanRequestStore(db *pgxpool.Pool) *LoanRequestStore {
+func NewLoanRequestStore(db dbPool) *LoanRequestStore {
 	return &LoanRequestStore{db: db}
 }
 

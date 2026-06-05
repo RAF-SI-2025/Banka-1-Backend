@@ -6,15 +6,14 @@ import (
 
 	"Banka1Back/credit-service-go/internal/model"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shopspring/decimal"
 )
 
 type LoanStore struct {
-	db *pgxpool.Pool
+	db dbPool
 }
 
-func NewLoanStore(db *pgxpool.Pool) *LoanStore {
+func NewLoanStore(db dbPool) *LoanStore {
 	return &LoanStore{db: db}
 }
 

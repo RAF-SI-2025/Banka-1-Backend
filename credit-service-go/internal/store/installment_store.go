@@ -4,15 +4,13 @@ import (
 	"context"
 
 	"Banka1Back/credit-service-go/internal/model"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type InstallmentStore struct {
-	db *pgxpool.Pool
+	db dbPool
 }
 
-func NewInstallmentStore(db *pgxpool.Pool) *InstallmentStore {
+func NewInstallmentStore(db dbPool) *InstallmentStore {
 	return &InstallmentStore{db: db}
 }
 

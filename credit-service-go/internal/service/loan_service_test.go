@@ -3,6 +3,7 @@ package service_test
 import (
 	"context"
 	"errors"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -22,17 +23,17 @@ import (
 // ---------------------------------------------------------------------------
 
 type stubLoanRequestRepo struct {
-	savedReq        model.LoanRequest
-	saveErr         error
-	findAllResult   []model.LoanRequest
-	findAllTotal    int
-	findAllErr      error
-	findByIDResult  model.LoanRequest
-	findByIDErr     error
-	updateResult    bool
-	updateErr       error
-	approveResult   model.Loan
-	approveErr      error
+	savedReq       model.LoanRequest
+	saveErr        error
+	findAllResult  []model.LoanRequest
+	findAllTotal   int
+	findAllErr     error
+	findByIDResult model.LoanRequest
+	findByIDErr    error
+	updateResult   bool
+	updateErr      error
+	approveResult  model.Loan
+	approveErr     error
 }
 
 func (r *stubLoanRequestRepo) Save(_ context.Context, req model.LoanRequest) (model.LoanRequest, error) {
@@ -100,13 +101,14 @@ func (r *stubLoanRepo) UpdateAfterInstallmentPayment(_ context.Context, _ int64,
 }
 
 type stubInstallmentRepo struct {
-	findByLoanResult  []model.Installment
-	findByLoanErr     error
-	findDueResult     []model.Installment
-	findDueErr        error
-	markRetryErr      error
-	markPaidErr       error
-	createErr         error
+	findByLoanResult []model.Installment
+	findByLoanErr    error
+	findDueResult    []model.Installment
+	findDueErr       error
+	findDueCalls     int32
+	markRetryErr     error
+	markPaidErr      error
+	createErr        error
 }
 
 func (r *stubInstallmentRepo) FindByLoanID(_ context.Context, _ int64) ([]model.Installment, error) {
@@ -114,6 +116,7 @@ func (r *stubInstallmentRepo) FindByLoanID(_ context.Context, _ int64) ([]model.
 }
 
 func (r *stubInstallmentRepo) FindDueUnpaid(_ context.Context) ([]model.Installment, error) {
+	atomic.AddInt32(&r.findDueCalls, 1)
 	return r.findDueResult, r.findDueErr
 }
 
@@ -130,10 +133,10 @@ func (r *stubInstallmentRepo) Create(_ context.Context, _ model.Installment) err
 }
 
 type stubAccountGateway struct {
-	detailsResult  client.AccountDetailsResponse
-	detailsErr     error
-	txFromBankErr  error
-	txToBankErr    error
+	detailsResult client.AccountDetailsResponse
+	detailsErr    error
+	txFromBankErr error
+	txToBankErr   error
 }
 
 func (g *stubAccountGateway) GetDetails(_ string) (client.AccountDetailsResponse, error) {

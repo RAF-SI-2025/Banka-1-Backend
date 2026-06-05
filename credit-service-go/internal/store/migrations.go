@@ -5,13 +5,11 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const migrationTable = "credit_service_go_schema_migrations"
 
-func RunMigrations(ctx context.Context, db *pgxpool.Pool, migrationsDir string) error {
+func RunMigrations(ctx context.Context, db dbPool, migrationsDir string) error {
 	_, err := db.Exec(ctx, `
 		CREATE TABLE IF NOT EXISTS `+migrationTable+` (
 			version VARCHAR(255) PRIMARY KEY,

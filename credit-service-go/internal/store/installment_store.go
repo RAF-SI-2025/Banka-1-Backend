@@ -9,7 +9,7 @@ import (
 )
 
 type InstallmentStore struct {
-	db *pgxpool.Pool
+	db pgxPool
 }
 
 func NewInstallmentStore(db *pgxpool.Pool) *InstallmentStore {

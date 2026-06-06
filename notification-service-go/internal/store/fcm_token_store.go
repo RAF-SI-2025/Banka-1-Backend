@@ -9,11 +9,21 @@ import (
 	"Banka1Back/notification-service-go/internal/model"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// pgxPool is the subset of *pgxpool.Pool used by the stores. Declaring it as an
+// interface lets unit tests inject a mock pool; *pgxpool.Pool satisfies it.
+type pgxPool interface {
+	Begin(ctx context.Context) (pgx.Tx, error)
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
+
 type FcmTokenStore struct {
-	db *pgxpool.Pool
+	db pgxPool
 }
 
 func NewFcmTokenStore(db *pgxpool.Pool) *FcmTokenStore {

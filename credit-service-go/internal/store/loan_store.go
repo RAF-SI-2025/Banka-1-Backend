@@ -6,12 +6,23 @@ import (
 
 	"Banka1Back/credit-service-go/internal/model"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shopspring/decimal"
 )
 
+// pgxPool is the subset of *pgxpool.Pool used by the stores. Declaring it as an
+// interface lets unit tests inject a mock pool; *pgxpool.Pool satisfies it.
+type pgxPool interface {
+	Begin(ctx context.Context) (pgx.Tx, error)
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
+
 type LoanStore struct {
-	db *pgxpool.Pool
+	db pgxPool
 }
 
 func NewLoanStore(db *pgxpool.Pool) *LoanStore {

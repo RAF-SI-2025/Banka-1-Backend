@@ -13,7 +13,7 @@ import (
 )
 
 type NotificationDeliveryStore struct {
-	db *pgxpool.Pool
+	db pgxPool
 }
 
 func NewNotificationDeliveryStore(db *pgxpool.Pool) *NotificationDeliveryStore {

@@ -5,12 +5,23 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shopspring/decimal"
 )
 
+// pgxPool is the subset of *pgxpool.Pool used by Repository, allowing a mock
+// pool to be injected in unit tests; *pgxpool.Pool satisfies it.
+type pgxPool interface {
+	Begin(ctx context.Context) (pgx.Tx, error)
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
+
 type Repository struct {
-	db *pgxpool.Pool
+	db pgxPool
 }
 
 func NewRepository(db *pgxpool.Pool) *Repository {

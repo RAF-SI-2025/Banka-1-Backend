@@ -17,9 +17,18 @@ const (
 	rateScale        = 8
 )
 
+// fxRepository is the persistence port used by Service; *Repository implements it.
+// Declared as an interface so unit tests can inject an in-memory fake.
+type fxRepository interface {
+	GetRatesByDate(ctx context.Context, date time.Time) ([]ExchangeRate, error)
+	GetRatesByRange(ctx context.Context, currencyCode string, from, to time.Time) ([]ExchangeRate, error)
+	LatestDate(ctx context.Context) (*time.Time, error)
+	ReplaceSnapshot(ctx context.Context, snapshotDate time.Time, rates []ExchangeRate) ([]ExchangeRate, error)
+}
+
 type Service struct {
 	cfg    platform.Config
-	repo   *Repository
+	repo   fxRepository
 	client *clients.TwelveDataClient
 }
 
